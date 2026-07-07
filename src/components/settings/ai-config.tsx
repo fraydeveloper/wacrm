@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
-import { Loader2, Sparkles, CheckCircle2, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Sparkles, CheckCircle2, Trash2, Eye, EyeOff, Power } from 'lucide-react';
 import { useAuth } from '@/hooks/use-auth';
 import { canEditSettings } from '@/lib/auth/roles';
 import { Button } from '@/components/ui/button';
@@ -47,7 +47,7 @@ const KEY_PLACEHOLDER: Record<AiProvider, string> = {
   gemini: 'AIza...',
 };
 
-export function AiConfig() {
+export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {}) {
   const { accountId, accountRole, profileLoading } = useAuth();
   const canEdit = accountRole ? canEditSettings(accountRole) : false;
 
@@ -183,6 +183,7 @@ export function AiConfig() {
       if (res.ok) {
         toast.success('AI assistant saved.');
         await fetchConfig();
+        onConfigSaved?.();
       } else {
         toast.error(data.error ?? 'Failed to save.');
       }
@@ -206,6 +207,7 @@ export function AiConfig() {
         setIsActive(false);
         setAutoReplyEnabled(false);
         setSystemPrompt('');
+        onConfigSaved?.();
       } else {
         const data = await res.json();
         toast.error(data.error ?? 'Failed to remove.');
@@ -229,10 +231,29 @@ export function AiConfig() {
 
   return (
     <div>
-      <SettingsPanelHead
-        title="Agent setup"
-        description="Bring your own OpenAI or Anthropic key. wacrm calls the provider directly with your key — no per-seat AI fees, and your data stays yours. This powers AI-drafted replies in the inbox, the auto-reply bot, and the Playground."
-      />
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <SettingsPanelHead
+          title="Agent setup"
+          description="Trae tu propia clave de OpenAI, Anthropic, DeepSeek, Gemini o Z.ai. wacrm llama directamente al proveedor con tu clave — sin cargos por asiento de IA, y tus datos se quedan contigo. Esto potencia las respuestas con IA en la bandeja de entrada, el bot de auto-respuesta y la Zona de pruebas."
+        />
+        {configured && (
+          <div
+            className={`flex items-center gap-1.5 shrink-0 mt-1 rounded-full px-3 py-1 text-xs font-semibold border ${
+              isActive
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
+                : 'bg-muted text-muted-foreground border-border'
+            }`}
+            title={isActive ? 'AI assistant está activo' : 'AI assistant está inactivo'}
+          >
+            <Power
+              className={`h-3 w-3 ${
+                isActive ? 'text-emerald-500 dark:text-emerald-400' : 'text-muted-foreground'
+              }`}
+            />
+            {isActive ? 'IA activa' : 'IA inactiva'}
+          </div>
+        )}
+      </div>
 
       {!canEdit && (
         <p className="mb-4 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
@@ -273,7 +294,7 @@ export function AiConfig() {
                 </Select>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <Label htmlFor="ai-model">Model</Label>
                 <Input
                   id="ai-model"
@@ -282,6 +303,9 @@ export function AiConfig() {
                   placeholder={AI_PROVIDER_DEFAULT_MODEL[provider]}
                   disabled={disabled}
                 />
+                <p className="text-xs text-muted-foreground">
+                  Recomendado: <code className="font-mono">{AI_PROVIDER_DEFAULT_MODEL[provider]}</code>
+                </p>
               </div>
             </div>
 

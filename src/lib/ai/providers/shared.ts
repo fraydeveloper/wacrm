@@ -50,13 +50,17 @@ export async function providerHttpError(
       ? 'invalid_key'
       : status === 429
         ? 'rate_limited'
-        : 'provider_error'
+        : status === 404
+          ? 'model_not_found'
+          : 'provider_error'
   const base =
     code === 'invalid_key'
       ? `${provider} rejected the API key`
       : code === 'rate_limited'
         ? `${provider} rate limit reached`
-        : `${provider} API error (${status})`
+        : code === 'model_not_found'
+          ? `${provider}: model not found — check the model name`
+          : `${provider} API error (${status})`
 
   return new AiError(detail ? `${base}: ${detail}` : base, {
     code,
