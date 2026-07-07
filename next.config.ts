@@ -62,6 +62,17 @@ const SECURITY_HEADERS = [
 
 const nextConfig: NextConfig = {
   /**
+   * `pdf-parse` (knowledge-base PDF upload, src/lib/ai/file-extract.ts)
+   * wraps `pdfjs-dist`, which does its own dynamic module resolution
+   * for worker/legacy builds. Letting Next's server bundler trace and
+   * rewrite those internals can silently break at runtime even though
+   * the build itself succeeds — excluding it from bundling and letting
+   * Node `require()` it directly at request time is the standard fix
+   * for this class of package.
+   */
+  serverExternalPackages: ["pdf-parse"],
+
+  /**
    * Cache-Control policy.
    *
    * Why this exists:
