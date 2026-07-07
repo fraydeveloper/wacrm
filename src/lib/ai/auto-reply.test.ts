@@ -75,6 +75,7 @@ function aiConfig(overrides: Partial<AiConfig> = {}): AiConfig {
     isActive: true,
     autoReplyEnabled: true,
     autoReplyMaxPerConversation: 3,
+    channelsEnabled: ['whatsapp', 'messenger', 'instagram', 'telegram'],
     embeddingsApiKey: null,
     ...overrides,
   }
@@ -148,8 +149,21 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
     expect(h.engineSendText).not.toHaveBeenCalled()
   })
 
+  it('skips when the bot is paused for this conversation\'s channel', async () => {
+    h.loadAiConfig.mockResolvedValue(aiConfig({ channelsEnabled: ['whatsapp'] }))
+    h.state.conv = {
+      channel: 'messenger',
+      assigned_agent_id: null,
+      ai_autoreply_disabled: false,
+      ai_reply_count: 0,
+    }
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.engineSendText).not.toHaveBeenCalled()
+  })
+
   it('skips when a human agent is assigned', async () => {
     h.state.conv = {
+      channel: 'whatsapp',
       assigned_agent_id: 'agent-9',
       ai_autoreply_disabled: false,
       ai_reply_count: 0,
@@ -160,6 +174,7 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
 
   it('skips when auto-reply was disabled on this conversation', async () => {
     h.state.conv = {
+      channel: 'whatsapp',
       assigned_agent_id: null,
       ai_autoreply_disabled: true,
       ai_reply_count: 0,
@@ -170,6 +185,7 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
 
   it('skips when the per-conversation cap is reached', async () => {
     h.state.conv = {
+      channel: 'whatsapp',
       assigned_agent_id: null,
       ai_autoreply_disabled: false,
       ai_reply_count: 3,

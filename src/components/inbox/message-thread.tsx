@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
+import { es } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -117,7 +118,7 @@ function formatDateSeparator(dateStr: string): string {
   const date = new Date(dateStr);
   if (isToday(date)) return "Hoy";
   if (isYesterday(date)) return "Ayer";
-  return format(date, "MMMM d, yyyy");
+  return format(date, "MMMM d, yyyy", { locale: es });
 }
 
 function groupMessagesByDate(messages: Message[]) {

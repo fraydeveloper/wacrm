@@ -45,7 +45,7 @@ export default function SettingsPage() {
   // already in context.
   const hints: Partial<Record<SettingsSection, ReactNode>> = useMemo(
     () => ({
-      appearance: mode.charAt(0).toUpperCase() + mode.slice(1),
+      appearance: mode === 'light' ? 'Claro' : 'Oscuro',
       deals: defaultCurrency,
     }),
     [mode, defaultCurrency],
@@ -69,11 +69,11 @@ export default function SettingsPage() {
     <div>
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-foreground">
-          Settings
+          Configuración
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Everything in one place — your account and your workspace. Pick a
-          section to manage it.
+          Todo en un solo lugar — tu cuenta y tu espacio de trabajo. Elige una
+          sección para gestionarla.
         </p>
       </div>
 

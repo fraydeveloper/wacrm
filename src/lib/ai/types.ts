@@ -8,6 +8,12 @@
 
 export type AiProvider = 'openai' | 'anthropic' | 'deepseek' | 'zai' | 'gemini'
 
+/** Channels the AI assistant can operate on. Mirrors `conversations.channel`
+ *  (migration 031) and the `Channel` type in `@/lib/channels/router`. */
+export type AiChannel = 'whatsapp' | 'messenger' | 'instagram' | 'telegram'
+
+export const AI_CHANNELS: AiChannel[] = ['whatsapp', 'messenger', 'instagram', 'telegram']
+
 export const AI_PROVIDERS: AiProvider[] = ['openai', 'anthropic', 'deepseek', 'zai', 'gemini']
 
 export function isAiProvider(value: unknown): value is AiProvider {
@@ -27,6 +33,9 @@ export interface AiConfig {
   isActive: boolean
   autoReplyEnabled: boolean
   autoReplyMaxPerConversation: number
+  /** Channels the auto-reply bot is allowed to answer on. The manual
+   *  "Draft with AI" button ignores this — it only gates the bot. */
+  channelsEnabled: AiChannel[]
   /** Optional OpenAI-compatible key for embeddings. When set, the
    *  knowledge base is embedded and semantic retrieval turns on; when
    *  null, retrieval falls back to lexical full-text search. */

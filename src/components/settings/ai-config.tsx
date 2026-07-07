@@ -27,9 +27,21 @@ import {
 import { SettingsPanelHead } from './settings-panel-head';
 import { AiKnowledgeCard } from './ai-knowledge';
 import { AI_PROVIDER_DEFAULT_MODEL } from '@/lib/ai/defaults';
-import { AI_PROVIDERS, type AiProvider } from '@/lib/ai/types';
+import { AI_PROVIDERS, type AiChannel, type AiProvider } from '@/lib/ai/types';
 
 const MASKED_KEY = '••••••••••••••••';
+
+// Only channels with a real send path today (see src/lib/channels/router.ts)
+// — Instagram/Telegram are reserved enum values with no working sender yet,
+// so a toggle for them would be dead UI.
+const TOGGLEABLE_CHANNELS: AiChannel[] = ['whatsapp', 'messenger'];
+
+const CHANNEL_LABEL: Record<AiChannel, string> = {
+  whatsapp: 'WhatsApp',
+  messenger: 'Messenger',
+  instagram: 'Instagram',
+  telegram: 'Telegram',
+};
 
 const PROVIDER_LABEL: Record<AiProvider, string> = {
   openai: 'OpenAI',
@@ -70,6 +82,7 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
   const [isActive, setIsActive] = useState(false);
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(false);
   const [maxPerConversation, setMaxPerConversation] = useState(3);
+  const [channelsEnabled, setChannelsEnabled] = useState<AiChannel[]>(TOGGLEABLE_CHANNELS);
 
   // Guard keyed on the account (not a bare boolean) so an in-place
   // account switch — ownership transfer, multi-account membership —
@@ -83,7 +96,7 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
       const res = await fetch('/api/ai/config');
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error ?? 'Failed to load AI configuration');
+        toast.error(data.error ?? 'No se pudo cargar la configuración de IA');
         return;
       }
       if (data.configured) {
@@ -94,6 +107,11 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
         setIsActive(data.is_active);
         setAutoReplyEnabled(data.auto_reply_enabled);
         setMaxPerConversation(data.auto_reply_max_per_conversation ?? 3);
+        setChannelsEnabled(
+          Array.isArray(data.ai_channels_enabled)
+            ? data.ai_channels_enabled
+            : TOGGLEABLE_CHANNELS,
+        );
         setHasStoredKey(Boolean(data.has_key));
         setApiKey(data.has_key ? MASKED_KEY : '');
         setKeyEdited(false);
@@ -102,7 +120,7 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
         setEmbeddingsKeyEdited(false);
       }
     } catch {
-      toast.error('Failed to load AI configuration');
+      toast.error('No se pudo cargar la configuración de IA');
     } finally {
       setLoading(false);
     }
@@ -124,6 +142,12 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
     if (isDefaultModel) setModel(AI_PROVIDER_DEFAULT_MODEL[next]);
   };
 
+  const toggleChannel = (channel: AiChannel, enabled: boolean) => {
+    setChannelsEnabled((prev) =>
+      enabled ? [...prev, channel] : prev.filter((c) => c !== channel),
+    );
+  };
+
   const keyPayload = () => (keyEdited ? apiKey.trim() : undefined);
 
   // undefined = leave unchanged; '' typed = null (clear); text = set.
@@ -139,6 +163,7 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
     is_active: isActive,
     auto_reply_enabled: autoReplyEnabled,
     auto_reply_max_per_conversation: maxPerConversation,
+    ai_channels_enabled: channelsEnabled,
   });
 
   const handleTest = async () => {
@@ -154,10 +179,10 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
         }),
       });
       const data = await res.json();
-      if (res.ok) toast.success('Key works — the provider responded.');
-      else toast.error(data.error ?? 'The provider rejected the request.');
+      if (res.ok) toast.success('La clave funciona — el proveedor respondió.');
+      else toast.error(data.error ?? 'El proveedor rechazó la solicitud.');
     } catch {
-      toast.error('Could not reach the provider.');
+      toast.error('No se pudo contactar al proveedor.');
     } finally {
       setTesting(false);
     }
@@ -165,11 +190,11 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
 
   const handleSave = async () => {
     if (!model.trim()) {
-      toast.error('Enter a model name.');
+      toast.error('Ingresa el nombre de un modelo.');
       return;
     }
     if (!configured && !keyEdited) {
-      toast.error('Enter your API key.');
+      toast.error('Ingresa tu clave de API.');
       return;
     }
     setSaving(true);
@@ -181,14 +206,14 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
       });
       const data = await res.json();
       if (res.ok) {
-        toast.success('AI assistant saved.');
+        toast.success('Asistente de IA guardado.');
         await fetchConfig();
         onConfigSaved?.();
       } else {
-        toast.error(data.error ?? 'Failed to save.');
+        toast.error(data.error ?? 'No se pudo guardar.');
       }
     } catch {
-      toast.error('Failed to save.');
+      toast.error('No se pudo guardar.');
     } finally {
       setSaving(false);
     }
@@ -199,21 +224,22 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
     try {
       const res = await fetch('/api/ai/config', { method: 'DELETE' });
       if (res.ok) {
-        toast.success('AI configuration removed.');
+        toast.success('Configuración de IA eliminada.');
         setConfigured(false);
         setHasStoredKey(false);
         setApiKey('');
         setKeyEdited(false);
         setIsActive(false);
         setAutoReplyEnabled(false);
+        setChannelsEnabled(TOGGLEABLE_CHANNELS);
         setSystemPrompt('');
         onConfigSaved?.();
       } else {
         const data = await res.json();
-        toast.error(data.error ?? 'Failed to remove.');
+        toast.error(data.error ?? 'No se pudo eliminar.');
       }
     } catch {
-      toast.error('Failed to remove.');
+      toast.error('No se pudo eliminar.');
     } finally {
       setRemoving(false);
     }
@@ -222,7 +248,7 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
   if (loading || profileLoading) {
     return (
       <div className="flex items-center justify-center py-16 text-muted-foreground">
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
+        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando…
       </div>
     );
   }
@@ -233,7 +259,7 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
     <div>
       <div className="flex items-start justify-between gap-4 mb-6">
         <SettingsPanelHead
-          title="Agent setup"
+          title="Configuración del agente"
           description="Trae tu propia clave de OpenAI, Anthropic, DeepSeek, Gemini o Z.ai. wacrm llama directamente al proveedor con tu clave — sin cargos por asiento de IA, y tus datos se quedan contigo. Esto potencia las respuestas con IA en la bandeja de entrada, el bot de auto-respuesta y la Zona de pruebas."
         />
         {configured && (
@@ -243,7 +269,7 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800'
                 : 'bg-muted text-muted-foreground border-border'
             }`}
-            title={isActive ? 'AI assistant está activo' : 'AI assistant está inactivo'}
+            title={isActive ? 'El asistente de IA está activo' : 'El asistente de IA está inactivo'}
           >
             <Power
               className={`h-3 w-3 ${
@@ -257,7 +283,7 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
 
       {!canEdit && (
         <p className="mb-4 rounded-md border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-          Only admins and owners can change the AI configuration.
+          Solo los administradores y propietarios pueden cambiar la configuración de IA.
         </p>
       )}
 
@@ -265,17 +291,17 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <Sparkles className="h-4 w-4 text-primary" /> Provider & key
+              <Sparkles className="h-4 w-4 text-primary" /> Proveedor y clave
             </CardTitle>
             <CardDescription>
-              Your key is encrypted at rest (AES-256-GCM) and never shown again
-              after saving.
+              Tu clave se cifra en reposo (AES-256-GCM) y nunca se vuelve a
+              mostrar después de guardarla.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Provider</Label>
+                <Label>Proveedor</Label>
                 <Select
                   value={provider}
                   onValueChange={(v) => handleProviderChange(v as AiProvider)}
@@ -295,7 +321,7 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
               </div>
 
               <div className="space-y-1">
-                <Label htmlFor="ai-model">Model</Label>
+                <Label htmlFor="ai-model">Modelo</Label>
                 <Input
                   id="ai-model"
                   value={model}
@@ -310,7 +336,7 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="ai-key">API key</Label>
+              <Label htmlFor="ai-key">Clave de API</Label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Input
@@ -354,16 +380,16 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
                   ) : (
                     <CheckCircle2 className="mr-2 h-4 w-4" />
                   )}
-                  Test key
+                  Probar clave
                 </Button>
               </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="ai-embeddings-key">
-                Embeddings key{' '}
+                Clave de embeddings{' '}
                 <span className="font-normal text-muted-foreground">
-                  (optional — enables semantic knowledge-base search)
+                  (opcional — habilita la búsqueda semántica en la base de conocimiento)
                 </span>
               </Label>
               <Input
@@ -385,11 +411,11 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
                 autoComplete="off"
               />
               <p className="text-xs text-muted-foreground">
-                An OpenAI key used only to embed your knowledge base
-                (text-embedding-3-small)
-                {provider === 'openai' ? ' — can be the same key as above' : ''}.
-                Leave blank to use keyword search instead. Clear it to turn
-                semantic search off.
+                Una clave de OpenAI usada solo para generar embeddings de tu base
+                de conocimiento (text-embedding-3-small)
+                {provider === 'openai' ? ' — puede ser la misma clave de arriba' : ''}.
+                Déjala en blanco para usar búsqueda por palabras clave. Bórrala
+                para desactivar la búsqueda semántica.
               </p>
             </div>
           </CardContent>
@@ -397,21 +423,21 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Behaviour</CardTitle>
+            <CardTitle className="text-base">Comportamiento</CardTitle>
             <CardDescription>
-              Tell the assistant about your business — products, tone, what it
-              may and may not promise. This context feeds both drafts and
-              auto-replies.
+              Cuéntale al asistente sobre tu negocio — productos, tono, qué
+              puede y qué no puede prometer. Este contexto alimenta tanto los
+              borradores como las auto-respuestas.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="ai-prompt">Business context & instructions</Label>
+              <Label htmlFor="ai-prompt">Contexto del negocio e instrucciones</Label>
               <Textarea
                 id="ai-prompt"
                 value={systemPrompt}
                 onChange={(e) => setSystemPrompt(e.target.value)}
-                placeholder="e.g. We are Acme, a coffee-equipment store. Be warm and concise. Never quote prices or delivery dates — hand off to a human for those."
+                placeholder="ej. Somos Acme, una tienda de equipos de café. Sé cálido y conciso. Nunca menciones precios ni fechas de entrega — deriva eso a un humano."
                 rows={5}
                 disabled={disabled}
               />
@@ -420,11 +446,11 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
             <div className="flex items-center justify-between gap-4 rounded-md border border-border p-3">
               <div>
                 <p className="text-sm font-medium text-foreground">
-                  Enable AI assistant
+                  Activar asistente de IA
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Master switch. Turns on the “Draft with AI” button in the
-                  inbox.
+                  Interruptor principal. Activa el botón &quot;Redactar con IA&quot; en
+                  la bandeja de entrada.
                 </p>
               </div>
               <Switch
@@ -437,12 +463,12 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
             <div className="flex items-center justify-between gap-4 rounded-md border border-border p-3">
               <div>
                 <p className="text-sm font-medium text-foreground">
-                  Auto-reply to inbound messages
+                  Respuesta automática a mensajes entrantes
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  The bot answers new inbound messages automatically (only when
-                  no flow handles them and no agent is assigned). Hands off to a
-                  human when it can’t help.
+                  El bot responde automáticamente a los mensajes entrantes
+                  nuevos (solo cuando ningún flujo los maneja y no hay un
+                  agente asignado). Deriva a un humano cuando no puede ayudar.
                 </p>
               </div>
               <Switch
@@ -452,11 +478,40 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
               />
             </div>
 
+            {autoReplyEnabled && (
+              <div className="rounded-md border border-border p-3">
+                <p className="text-sm font-medium text-foreground">
+                  Canales con respuesta automática
+                </p>
+                <p className="mb-3 text-xs text-muted-foreground">
+                  Pausa la respuesta automática en un canal sin apagarla en los
+                  demás. El botón &quot;Redactar con IA&quot; sigue disponible en
+                  todos los canales — esto solo controla si el bot contesta
+                  solo.
+                </p>
+                <div className="space-y-2">
+                  {TOGGLEABLE_CHANNELS.map((channel) => (
+                    <div key={channel} className="flex items-center justify-between gap-4">
+                      <span className="text-sm text-foreground">
+                        {CHANNEL_LABEL[channel]}
+                      </span>
+                      <Switch
+                        checked={channelsEnabled.includes(channel)}
+                        onCheckedChange={(checked) => toggleChannel(channel, checked)}
+                        disabled={disabled}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-between gap-4">
               <div>
-                <Label htmlFor="ai-max">Max auto-replies per conversation</Label>
+                <Label htmlFor="ai-max">Máximo de auto-respuestas por conversación</Label>
                 <p className="text-xs text-muted-foreground">
-                  After this many bot replies in one thread, the bot goes quiet.
+                  Después de esta cantidad de respuestas del bot en un mismo
+                  hilo, el bot deja de responder.
                 </p>
               </div>
               <Input
@@ -500,7 +555,7 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
               ) : (
                 <Trash2 className="mr-2 h-4 w-4" />
               )}
-              Remove
+              Quitar
             </Button>
           ) : (
             <span />
@@ -508,7 +563,7 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
 
           <Button onClick={handleSave} disabled={disabled}>
             {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save
+            Guardar
           </Button>
         </div>
       </div>

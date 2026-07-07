@@ -37,9 +37,9 @@ interface DocSummary {
 }
 
 const SOURCE_LABEL: Record<DocSourceType, string> = {
-  manual: 'Pasted',
-  file: 'File',
-  google_sheet: 'Sheet',
+  manual: 'Pegado',
+  file: 'Archivo',
+  google_sheet: 'Hoja',
 };
 
 /** Editor target: 'new' when creating, a doc id when editing, null when closed. */
@@ -86,9 +86,9 @@ export function AiKnowledgeCard({
       const res = await fetch('/api/ai/knowledge');
       const data = await res.json();
       if (res.ok) setDocs(data.documents ?? []);
-      else toast.error(data.error ?? 'Failed to load knowledge base');
+      else toast.error(data.error ?? 'No se pudo cargar la base de conocimiento');
     } catch {
-      toast.error('Failed to load knowledge base');
+      toast.error('No se pudo cargar la base de conocimiento');
     } finally {
       setLoading(false);
     }
@@ -124,14 +124,14 @@ export function AiKnowledgeCard({
       const res = await fetch(`/api/ai/knowledge/${id}`);
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error ?? 'Failed to open document');
+        toast.error(data.error ?? 'No se pudo abrir el documento');
         return;
       }
       setEditing(id);
       setTitle(data.title ?? '');
       setContent(data.content ?? '');
     } catch {
-      toast.error('Failed to open document');
+      toast.error('No se pudo abrir el documento');
     }
   };
 
@@ -143,7 +143,7 @@ export function AiKnowledgeCard({
 
   const save = async () => {
     if (!title.trim() || !content.trim()) {
-      toast.error('Title and content are required.');
+      toast.error('El título y el contenido son obligatorios.');
       return;
     }
     setSaving(true);
@@ -161,14 +161,14 @@ export function AiKnowledgeCard({
       if (res.ok) {
         // A 200 with `warning` means saved but indexing degraded.
         if (data.warning) toast.warning(data.warning);
-        else toast.success(isNew ? 'Document added.' : 'Document updated.');
+        else toast.success(isNew ? 'Documento agregado.' : 'Documento actualizado.');
         cancelEdit();
         await fetchDocs();
       } else {
-        toast.error(data.error ?? 'Failed to save.');
+        toast.error(data.error ?? 'No se pudo guardar.');
       }
     } catch {
-      toast.error('Failed to save.');
+      toast.error('No se pudo guardar.');
     } finally {
       setSaving(false);
     }
@@ -178,14 +178,14 @@ export function AiKnowledgeCard({
     try {
       const res = await fetch(`/api/ai/knowledge/${id}`, { method: 'DELETE' });
       if (res.ok) {
-        toast.success('Document removed.');
+        toast.success('Documento eliminado.');
         setDocs((d) => d.filter((x) => x.id !== id));
       } else {
         const data = await res.json();
-        toast.error(data.error ?? 'Failed to remove.');
+        toast.error(data.error ?? 'No se pudo eliminar.');
       }
     } catch {
-      toast.error('Failed to remove.');
+      toast.error('No se pudo eliminar.');
     }
   };
 
@@ -195,12 +195,12 @@ export function AiKnowledgeCard({
       const res = await fetch('/api/ai/knowledge/reindex', { method: 'POST' });
       const data = await res.json();
       if (res.ok && data.success) {
-        toast.success(`Reindexed ${data.reindexed} document(s).`);
+        toast.success(`Se reindexaron ${data.reindexed} documento(s).`);
       } else {
-        toast.error(data.error ?? 'Reindex failed.');
+        toast.error(data.error ?? 'Falló la reindexación.');
       }
     } catch {
-      toast.error('Reindex failed.');
+      toast.error('Falló la reindexación.');
     } finally {
       setReindexing(false);
     }
@@ -219,13 +219,13 @@ export function AiKnowledgeCard({
       const data = await res.json();
       if (res.ok) {
         if (data.warning) toast.warning(data.warning);
-        else toast.success(`"${data.title ?? file.name}" added.`);
+        else toast.success(`"${data.title ?? file.name}" agregado.`);
         await fetchDocs();
       } else {
-        toast.error(data.error ?? 'Upload failed.');
+        toast.error(data.error ?? 'Falló la subida.');
       }
     } catch {
-      toast.error('Upload failed.');
+      toast.error('Falló la subida.');
     } finally {
       setUploading(false);
     }
@@ -233,7 +233,7 @@ export function AiKnowledgeCard({
 
   const saveGoogleConfig = async () => {
     if (!googleJson.trim()) {
-      toast.error('Paste the Service Account JSON key.');
+      toast.error('Pega la clave JSON de la cuenta de servicio.');
       return;
     }
     setSavingGoogle(true);
@@ -245,43 +245,43 @@ export function AiKnowledgeCard({
       });
       const data = await res.json();
       if (res.ok) {
-        toast.success('Google Sheets connected.');
+        toast.success('Google Sheets conectado.');
         setGoogleConnected(true);
         setGoogleEmail(data.service_account_email ?? null);
         setGoogleJson('');
         setGoogleFormOpen(false);
       } else {
-        toast.error(data.error ?? 'Failed to connect.');
+        toast.error(data.error ?? 'No se pudo conectar.');
       }
     } catch {
-      toast.error('Failed to connect.');
+      toast.error('No se pudo conectar.');
     } finally {
       setSavingGoogle(false);
     }
   };
 
   const disconnectGoogle = async () => {
-    if (!confirm('Disconnect Google Sheets? Already-synced documents keep their content until you sync again.')) {
+    if (!confirm('¿Desconectar Google Sheets? Los documentos ya sincronizados conservan su contenido hasta que vuelvas a sincronizar.')) {
       return;
     }
     try {
       const res = await fetch('/api/ai/google-sheets/config', { method: 'DELETE' });
       if (res.ok) {
-        toast.success('Google Sheets disconnected.');
+        toast.success('Google Sheets desconectado.');
         setGoogleConnected(false);
         setGoogleEmail(null);
       } else {
         const data = await res.json();
-        toast.error(data.error ?? 'Failed to disconnect.');
+        toast.error(data.error ?? 'No se pudo desconectar.');
       }
     } catch {
-      toast.error('Failed to disconnect.');
+      toast.error('No se pudo desconectar.');
     }
   };
 
   const addFromSheet = async () => {
     if (!sheetUrl.trim() || !sheetTitle.trim()) {
-      toast.error('Spreadsheet URL/ID and title are required.');
+      toast.error('La URL/ID de la hoja de cálculo y el título son obligatorios.');
       return;
     }
     setAddingSheet(true);
@@ -298,17 +298,17 @@ export function AiKnowledgeCard({
       const data = await res.json();
       if (res.ok) {
         if (data.warning) toast.warning(data.warning);
-        else toast.success('Sheet added.');
+        else toast.success('Hoja agregada.');
         setSheetFormOpen(false);
         setSheetUrl('');
         setSheetRange('Sheet1');
         setSheetTitle('');
         await fetchDocs();
       } else {
-        toast.error(data.error ?? 'Failed to add sheet.');
+        toast.error(data.error ?? 'No se pudo agregar la hoja.');
       }
     } catch {
-      toast.error('Failed to add sheet.');
+      toast.error('No se pudo agregar la hoja.');
     } finally {
       setAddingSheet(false);
     }
@@ -321,13 +321,13 @@ export function AiKnowledgeCard({
       const data = await res.json();
       if (res.ok) {
         if (data.warning) toast.warning(data.warning);
-        else toast.success('Synced.');
+        else toast.success('Sincronizado.');
         await fetchDocs();
       } else {
-        toast.error(data.error ?? 'Sync failed.');
+        toast.error(data.error ?? 'Falló la sincronización.');
       }
     } catch {
-      toast.error('Sync failed.');
+      toast.error('Falló la sincronización.');
     } finally {
       setSyncingId(null);
     }
@@ -337,21 +337,21 @@ export function AiKnowledgeCard({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <BookOpen className="h-4 w-4 text-primary" /> Knowledge base
+          <BookOpen className="h-4 w-4 text-primary" /> Base de conocimiento
         </CardTitle>
         <CardDescription>
-          Add FAQs, policies, or product details. The assistant retrieves the
-          relevant pieces when drafting and auto-replying, so it can answer
-          instead of handing off.
+          Agrega preguntas frecuentes, políticas o detalles de productos. El
+          asistente recupera las partes relevantes al redactar y
+          auto-responder, para poder contestar en lugar de derivar.
           {hasEmbeddingsKey
-            ? ' Semantic search is on (embeddings key set).'
-            : ' Using keyword search — add an embeddings key above for semantic search.'}
+            ? ' La búsqueda semántica está activada (clave de embeddings configurada).'
+            : ' Usando búsqueda por palabras clave — agrega una clave de embeddings arriba para búsqueda semántica.'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? (
           <div className="flex items-center py-4 text-sm text-muted-foreground">
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Cargando…
           </div>
         ) : (
           <>
@@ -365,28 +365,28 @@ export function AiKnowledgeCard({
                 {googleConnected ? (
                   canEdit && (
                     <Button variant="ghost" size="sm" onClick={() => void disconnectGoogle()}>
-                      <Unlink className="mr-2 h-4 w-4" /> Disconnect
+                      <Unlink className="mr-2 h-4 w-4" /> Desconectar
                     </Button>
                   )
                 ) : (
                   canEdit &&
                   !googleFormOpen && (
                     <Button variant="outline" size="sm" onClick={() => setGoogleFormOpen(true)}>
-                      <Link2 className="mr-2 h-4 w-4" /> Connect
+                      <Link2 className="mr-2 h-4 w-4" /> Conectar
                     </Button>
                   )
                 )}
               </div>
               {googleConnected ? (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Connected as <code className="text-foreground">{googleEmail}</code>. Share any
-                  sheet you want indexed with this email, like a collaborator.
+                  Conectado como <code className="text-foreground">{googleEmail}</code>. Comparte
+                  cualquier hoja que quieras indexar con este correo, como si fuera un colaborador.
                 </p>
               ) : googleFormOpen ? (
                 <div className="mt-3 space-y-2">
                   <p className="text-xs text-muted-foreground">
-                    Paste the Service Account JSON key from Google Cloud Console (IAM &amp;
-                    Admin → Service Accounts → Keys).
+                    Pega la clave JSON de la cuenta de servicio desde Google Cloud Console (IAM &amp;
+                    Admin → Cuentas de servicio → Claves).
                   </p>
                   <Textarea
                     value={googleJson}
@@ -405,25 +405,25 @@ export function AiKnowledgeCard({
                       }}
                       disabled={savingGoogle}
                     >
-                      Cancel
+                      Cancelar
                     </Button>
                     <Button size="sm" onClick={() => void saveGoogleConfig()} disabled={savingGoogle}>
                       {savingGoogle && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Connect
+                      Conectar
                     </Button>
                   </div>
                 </div>
               ) : (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  Not connected. Connect a Service Account to pull spreadsheet data into the
-                  knowledge base.
+                  No conectado. Conecta una cuenta de servicio para traer datos de la hoja de
+                  cálculo a la base de conocimiento.
                 </p>
               )}
             </div>
 
             {docs.length === 0 && editing === null && (
               <p className="text-sm text-muted-foreground">
-                No documents yet.
+                Todavía no hay documentos.
               </p>
             )}
 
@@ -443,7 +443,7 @@ export function AiKnowledgeCard({
                       </span>
                       {doc.source_type === 'google_sheet' && doc.last_synced_at && (
                         <span className="shrink-0 text-[10px] text-muted-foreground">
-                          synced {new Date(doc.last_synced_at).toLocaleString()}
+                          sincronizado {new Date(doc.last_synced_at).toLocaleString()}
                         </span>
                       )}
                     </span>
@@ -456,7 +456,7 @@ export function AiKnowledgeCard({
                             className="h-8 w-8 p-0"
                             onClick={() => void syncSheet(doc.id)}
                             disabled={syncingId === doc.id}
-                            title="Sync now"
+                            title="Sincronizar ahora"
                           >
                             {syncingId === doc.id ? (
                               <Loader2 className="h-4 w-4 animate-spin" />
@@ -470,7 +470,7 @@ export function AiKnowledgeCard({
                           size="sm"
                           className="h-8 w-8 p-0"
                           onClick={() => void openEdit(doc.id)}
-                          title="Edit"
+                          title="Editar"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -479,7 +479,7 @@ export function AiKnowledgeCard({
                           size="sm"
                           className="h-8 w-8 p-0 text-destructive hover:text-destructive"
                           onClick={() => void remove(doc.id)}
-                          title="Delete"
+                          title="Eliminar"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
@@ -501,50 +501,50 @@ export function AiKnowledgeCard({
             {editing !== null ? (
               <div className="space-y-3 rounded-md border border-border p-3">
                 <div className="space-y-2">
-                  <Label htmlFor="kb-title">Title</Label>
+                  <Label htmlFor="kb-title">Título</Label>
                   <Input
                     id="kb-title"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Returns & refunds policy"
+                    placeholder="ej. Política de cambios y devoluciones"
                     disabled={saving}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="kb-content">Content</Label>
+                  <Label htmlFor="kb-content">Contenido</Label>
                   <Textarea
                     id="kb-content"
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
-                    placeholder="Paste the FAQ answer, policy text, or product details…"
+                    placeholder="Pega la respuesta de la FAQ, el texto de la política o los detalles del producto…"
                     rows={8}
                     disabled={saving}
                   />
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="ghost" onClick={cancelEdit} disabled={saving}>
-                    Cancel
+                    Cancelar
                   </Button>
                   <Button onClick={save} disabled={saving}>
                     {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save document
+                    Guardar documento
                   </Button>
                 </div>
               </div>
             ) : sheetFormOpen ? (
               <div className="space-y-3 rounded-md border border-border p-3">
                 <div className="space-y-2">
-                  <Label htmlFor="kb-sheet-title">Title</Label>
+                  <Label htmlFor="kb-sheet-title">Título</Label>
                   <Input
                     id="kb-sheet-title"
                     value={sheetTitle}
                     onChange={(e) => setSheetTitle(e.target.value)}
-                    placeholder="e.g. Product catalog"
+                    placeholder="ej. Catálogo de productos"
                     disabled={addingSheet}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="kb-sheet-url">Spreadsheet URL or ID</Label>
+                  <Label htmlFor="kb-sheet-url">URL o ID de la hoja de cálculo</Label>
                   <Input
                     id="kb-sheet-url"
                     value={sheetUrl}
@@ -554,7 +554,7 @@ export function AiKnowledgeCard({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="kb-sheet-range">Sheet / range</Label>
+                  <Label htmlFor="kb-sheet-range">Hoja / rango</Label>
                   <Input
                     id="kb-sheet-range"
                     value={sheetRange}
@@ -563,8 +563,8 @@ export function AiKnowledgeCard({
                     disabled={addingSheet}
                   />
                   <p className="text-xs text-muted-foreground">
-                    The tab name (e.g. &quot;Sheet1&quot;) or a range like &quot;Sheet1!A:D&quot;.
-                    The first row is treated as column headers.
+                    El nombre de la pestaña (ej. &quot;Sheet1&quot;) o un rango como &quot;Sheet1!A:D&quot;.
+                    La primera fila se trata como encabezados de columna.
                   </p>
                 </div>
                 <div className="flex justify-end gap-2">
@@ -578,16 +578,16 @@ export function AiKnowledgeCard({
                     }}
                     disabled={addingSheet}
                   >
-                    Cancel
+                    Cancelar
                   </Button>
                   <Button onClick={() => void addFromSheet()} disabled={addingSheet || !googleConnected}>
                     {addingSheet && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Add sheet
+                    Agregar hoja
                   </Button>
                 </div>
                 {!googleConnected && (
                   <p className="text-xs text-amber-500">
-                    Connect Google Sheets above first.
+                    Primero conecta Google Sheets arriba.
                   </p>
                 )}
               </div>
@@ -596,7 +596,7 @@ export function AiKnowledgeCard({
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div className="flex flex-wrap gap-2">
                     <Button variant="outline" size="sm" onClick={openNew}>
-                      <Plus className="mr-2 h-4 w-4" /> Add document
+                      <Plus className="mr-2 h-4 w-4" /> Agregar documento
                     </Button>
                     <Button
                       variant="outline"
@@ -609,10 +609,10 @@ export function AiKnowledgeCard({
                       ) : (
                         <Upload className="mr-2 h-4 w-4" />
                       )}
-                      Upload file
+                      Subir archivo
                     </Button>
                     <Button variant="outline" size="sm" onClick={() => setSheetFormOpen(true)}>
-                      <Table2 className="mr-2 h-4 w-4" /> Add from Google Sheet
+                      <Table2 className="mr-2 h-4 w-4" /> Agregar desde Google Sheet
                     </Button>
                   </div>
                   {hasEmbeddingsKey && docs.length > 0 && (
@@ -621,14 +621,14 @@ export function AiKnowledgeCard({
                       size="sm"
                       onClick={reindex}
                       disabled={reindexing}
-                      title="Re-embed all documents (e.g. after adding an embeddings key)"
+                      title="Regenera los embeddings de todos los documentos (ej. después de agregar una clave de embeddings)"
                     >
                       {reindexing ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : (
                         <RefreshCw className="mr-2 h-4 w-4" />
                       )}
-                      Reindex
+                      Reindexar
                     </Button>
                   )}
                 </div>

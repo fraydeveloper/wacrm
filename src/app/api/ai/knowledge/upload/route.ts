@@ -39,9 +39,9 @@ export async function POST(request: Request) {
     }
 
     const titleField = form?.get('title')
-    const title =
-      (typeof titleField === 'string' ? titleField.trim() : '') ||
-      file.name.replace(/\.[^./]+$/, '')
+    // Keep the extension in the default title (e.g. "faq.pdf", not "faq")
+    // so the document list shows what kind of file was uploaded.
+    const title = (typeof titleField === 'string' ? titleField.trim() : '') || file.name
 
     const buffer = Buffer.from(await file.arrayBuffer())
     let content: string

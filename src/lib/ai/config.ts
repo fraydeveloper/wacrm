@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { decrypt } from '@/lib/whatsapp/encryption'
-import type { AiConfig, AiProvider } from './types'
+import { AI_CHANNELS, type AiChannel, type AiConfig, type AiProvider } from './types'
 
 interface AiConfigRow {
   provider: AiProvider
@@ -11,10 +11,11 @@ interface AiConfigRow {
   auto_reply_enabled: boolean
   auto_reply_max_per_conversation: number
   embeddings_api_key: string | null
+  ai_channels_enabled: AiChannel[] | null
 }
 
 const CONFIG_COLUMNS =
-  'provider, model, api_key, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, embeddings_api_key'
+  'provider, model, api_key, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, embeddings_api_key, ai_channels_enabled'
 
 /**
  * Load and decrypt the account's AI config for *use* (draft or
@@ -76,6 +77,11 @@ export async function loadAiConfig(
     isActive: row.is_active,
     autoReplyEnabled: row.auto_reply_enabled,
     autoReplyMaxPerConversation: row.auto_reply_max_per_conversation,
+    // Defensive fallback for rows written before migration 034 backfilled
+    // the column (NOT NULL + DEFAULT covers new writes, but belt-and-braces
+    // here means a stale row degrades to "all channels" — today's actual
+    // behavior — rather than silently muting the bot everywhere.
+    channelsEnabled: row.ai_channels_enabled ?? AI_CHANNELS,
     embeddingsApiKey,
   }
 }

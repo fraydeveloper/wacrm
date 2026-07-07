@@ -70,7 +70,7 @@ const nextConfig: NextConfig = {
    * Node `require()` it directly at request time is the standard fix
    * for this class of package.
    */
-  serverExternalPackages: ["pdf-parse"],
+  serverExternalPackages: ["pdf-parse", "@napi-rs/canvas"],
 
   /**
    * Cache-Control policy.

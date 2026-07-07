@@ -117,7 +117,7 @@ export function MessengerConfig() {
       }
     } catch (err) {
       console.error('fetchConfig error:', err);
-      toast.error('Failed to load Messenger configuration');
+      toast.error('No se pudo cargar la configuración de Messenger');
     } finally {
       setLoading(false);
     }
@@ -137,11 +137,11 @@ export function MessengerConfig() {
 
   async function handleSave() {
     if (!pageId.trim()) {
-      toast.error('Page ID is required');
+      toast.error('El Page ID es obligatorio');
       return;
     }
     if (!config && (!pageAccessToken.trim() || !tokenEdited)) {
-      toast.error('Page Access Token is required for initial setup');
+      toast.error('El Page Access Token es obligatorio para la configuración inicial');
       return;
     }
 
@@ -156,7 +156,7 @@ export function MessengerConfig() {
       if (tokenEdited && pageAccessToken !== MASKED_TOKEN && pageAccessToken.trim()) {
         payload.page_access_token = pageAccessToken.trim();
       } else if (config) {
-        toast.error('Please re-enter the Page Access Token to save changes');
+        toast.error('Vuelve a ingresar el Page Access Token para guardar los cambios');
         setSaving(false);
         return;
       }
@@ -170,21 +170,21 @@ export function MessengerConfig() {
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.error || 'Failed to save configuration');
+        toast.error(data.error || 'No se pudo guardar la configuración');
         setSaving(false);
         return;
       }
 
       toast.success(
         data.page_info?.name
-          ? `Connected — ${data.page_info.name} can now receive events.`
-          : 'Messenger connected. Events will start flowing once the webhook is subscribed in Meta.',
+          ? `Conectado — ${data.page_info.name} ya puede recibir eventos.`
+          : 'Messenger conectado. Los eventos comenzarán a llegar una vez que el webhook esté suscrito en Meta.',
       );
 
       if (accountId) await fetchConfig(accountId);
     } catch (err) {
       console.error('Save error:', err);
-      toast.error('Failed to save configuration');
+      toast.error('No se pudo guardar la configuración');
     } finally {
       setSaving(false);
     }
@@ -202,26 +202,26 @@ export function MessengerConfig() {
         setStatusMessage('');
         toast.success(
           payload.page_info?.name
-            ? `Connected to ${payload.page_info.name}`
-            : 'API connection successful',
+            ? `Conectado a ${payload.page_info.name}`
+            : 'Conexión con la API exitosa',
         );
       } else {
         setConnectionStatus('disconnected');
         setNeedsReset(Boolean(payload.needs_reset));
         setStatusMessage(payload.message || '');
-        toast.error(payload.message || 'API connection failed');
+        toast.error(payload.message || 'Falló la conexión con la API');
       }
     } catch (err) {
       console.error('Test connection error:', err);
       setConnectionStatus('disconnected');
-      toast.error('Connection test failed. Check network and try again.');
+      toast.error('Falló la prueba de conexión. Verifica la red e intenta de nuevo.');
     } finally {
       setTesting(false);
     }
   }
 
   async function handleReset() {
-    if (!confirm('This will delete the current Messenger config so you can re-enter it. Continue?')) {
+    if (!confirm('Esto eliminará la configuración actual de Messenger para que puedas volver a ingresarla. ¿Continuar?')) {
       return;
     }
 
@@ -231,11 +231,11 @@ export function MessengerConfig() {
       const data = await res.json();
 
       if (!res.ok) {
-        toast.error(data.error || 'Failed to reset configuration');
+        toast.error(data.error || 'No se pudo restablecer la configuración');
         return;
       }
 
-      toast.success('Configuration cleared. You can now re-enter your credentials.');
+      toast.success('Configuración eliminada. Ya puedes volver a ingresar tus credenciales.');
       setConfig(null);
       setPageId('');
       setPageAccessToken('');
@@ -246,7 +246,7 @@ export function MessengerConfig() {
       setStatusMessage('');
     } catch (err) {
       console.error('Reset error:', err);
-      toast.error('Failed to reset configuration');
+      toast.error('No se pudo restablecer la configuración');
     } finally {
       setResetting(false);
     }
@@ -254,15 +254,15 @@ export function MessengerConfig() {
 
   function handleCopyWebhookUrl() {
     navigator.clipboard.writeText(webhookUrl);
-    toast.success('Webhook URL copied to clipboard');
+    toast.success('URL del webhook copiada al portapapeles');
   }
 
   if (loading) {
     return (
       <section className="animate-in fade-in-50 duration-200">
         <SettingsPanelHead
-          title="Messenger connection"
-          description="Connect a Facebook Page via the Meta Messenger Platform."
+          title="Conexión de Messenger"
+          description="Conecta una página de Facebook a través de la Meta Messenger Platform."
         />
         <div className="flex items-center justify-center py-12">
           <Loader2 className="size-6 animate-spin text-primary" />
@@ -274,8 +274,8 @@ export function MessengerConfig() {
   return (
     <section className="animate-in fade-in-50 duration-200">
       <SettingsPanelHead
-        title="Messenger connection"
-        description="Connect a Facebook Page via the Meta Messenger Platform. Reuses the same AI knowledge base and inbox as WhatsApp."
+        title="Conexión de Messenger"
+        description="Conecta una página de Facebook a través de la Meta Messenger Platform. Reutiliza la misma base de conocimiento de IA y bandeja de entrada que WhatsApp."
       />
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <div className="space-y-6">
@@ -285,7 +285,7 @@ export function MessengerConfig() {
                 <AlertTriangle className="size-5 text-amber-400 mt-0.5 shrink-0" />
                 <div className="flex-1">
                   <AlertTitle className="text-amber-200 mb-1">
-                    Stored token can&apos;t be decrypted
+                    El token guardado no se puede descifrar
                   </AlertTitle>
                   <AlertDescription className="text-amber-100/80 text-sm">
                     {statusMessage}
@@ -299,12 +299,12 @@ export function MessengerConfig() {
                     {resetting ? (
                       <>
                         <Loader2 className="size-4 animate-spin" />
-                        Resetting...
+                        Restableciendo...
                       </>
                     ) : (
                       <>
                         <RotateCcw className="size-4" />
-                        Reset Configuration
+                        Restablecer configuración
                       </>
                     )}
                   </Button>
@@ -321,29 +321,29 @@ export function MessengerConfig() {
                 <XCircle className="size-4 text-red-500" />
               )}
               <AlertTitle className="text-foreground mb-0">
-                {connectionStatus === 'connected' ? 'Credentials valid' : 'Not Connected'}
+                {connectionStatus === 'connected' ? 'Credenciales válidas' : 'No conectado'}
               </AlertTitle>
             </div>
             <AlertDescription className="text-muted-foreground">
               {connectionStatus === 'connected'
-                ? 'Your Page Access Token authenticates with Meta. Make sure the webhook below is subscribed in the Meta App Dashboard so events actually arrive.'
+                ? 'Tu Page Access Token se autentica con Meta. Asegúrate de que el webhook de abajo esté suscrito en el Meta App Dashboard para que los eventos realmente lleguen.'
                 : statusMessage ||
-                  'Configure your Facebook Page credentials below to connect Messenger.'}
+                  'Configura las credenciales de tu página de Facebook abajo para conectar Messenger.'}
             </AlertDescription>
           </Alert>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-foreground">Page Credentials</CardTitle>
+              <CardTitle className="text-foreground">Credenciales de la página</CardTitle>
               <CardDescription className="text-muted-foreground">
-                From Meta for Developers → your App → Messenger → Settings.
+                Desde Meta for Developers → tu App → Messenger → Settings.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label className="text-muted-foreground">Page ID</Label>
                 <Input
-                  placeholder="e.g. 102938475610234"
+                  placeholder="ej. 102938475610234"
                   value={pageId}
                   onChange={(e) => setPageId(e.target.value)}
                   className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
@@ -355,7 +355,7 @@ export function MessengerConfig() {
                 <div className="relative">
                   <Input
                     type={showToken ? 'text' : 'password'}
-                    placeholder="Enter your Page Access Token"
+                    placeholder="Ingresa tu Page Access Token"
                     value={pageAccessToken}
                     onChange={(e) => {
                       setPageAccessToken(e.target.value);
@@ -379,7 +379,7 @@ export function MessengerConfig() {
                 </div>
                 {config && !tokenEdited && (
                   <p className="text-xs text-muted-foreground">
-                    Token is hidden for security. Re-enter it to update configuration.
+                    El token está oculto por seguridad. Vuelve a ingresarlo para actualizar la configuración.
                   </p>
                 )}
               </div>
@@ -387,13 +387,13 @@ export function MessengerConfig() {
               <div className="space-y-2">
                 <Label className="text-muted-foreground">Webhook Verify Token</Label>
                 <Input
-                  placeholder="Create a custom verify token"
+                  placeholder="Crea un token de verificación personalizado"
                   value={verifyToken}
                   onChange={(e) => setVerifyToken(e.target.value)}
                   className="bg-muted border-border text-foreground placeholder:text-muted-foreground"
                 />
                 <p className="text-xs text-muted-foreground">
-                  A custom string you create. Must match the token you set in the Meta webhook settings.
+                  Una cadena personalizada que tú creas. Debe coincidir con el token que configures en los ajustes de webhook de Meta.
                 </p>
               </div>
             </CardContent>
@@ -401,10 +401,10 @@ export function MessengerConfig() {
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-foreground">Webhook Configuration</CardTitle>
+              <CardTitle className="text-foreground">Configuración del webhook</CardTitle>
               <CardDescription className="text-muted-foreground">
-                Use this URL as the Messenger callback in the Meta App Dashboard. Instagram
-                Direct will reuse this same URL once it&apos;s wired up.
+                Usa esta URL como el callback de Messenger en el Meta App Dashboard. Instagram
+                Direct reutilizará esta misma URL una vez que esté conectado.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -438,10 +438,10 @@ export function MessengerConfig() {
               {saving ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Saving...
+                  Guardando...
                 </>
               ) : (
-                'Save Configuration'
+                'Guardar configuración'
               )}
             </Button>
             <Button
@@ -453,12 +453,12 @@ export function MessengerConfig() {
               {testing ? (
                 <>
                   <Loader2 className="size-4 animate-spin" />
-                  Testing...
+                  Probando...
                 </>
               ) : (
                 <>
                   <Zap className="size-4" />
-                  Test API Connection
+                  Probar conexión con la API
                 </>
               )}
             </Button>
@@ -472,12 +472,12 @@ export function MessengerConfig() {
                 {resetting ? (
                   <>
                     <Loader2 className="size-4 animate-spin" />
-                    Resetting...
+                    Restableciendo...
                   </>
                 ) : (
                   <>
                     <RotateCcw className="size-4" />
-                    Reset Configuration
+                    Restablecer configuración
                   </>
                 )}
               </Button>
@@ -488,9 +488,9 @@ export function MessengerConfig() {
         <div>
           <Card>
             <CardHeader>
-              <CardTitle className="text-foreground text-base">Setup Instructions</CardTitle>
+              <CardTitle className="text-foreground text-base">Instrucciones de configuración</CardTitle>
               <CardDescription className="text-muted-foreground">
-                Follow these steps to connect a Facebook Page.
+                Sigue estos pasos para conectar una página de Facebook.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -499,14 +499,14 @@ export function MessengerConfig() {
                   <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
                     <span className="flex items-center gap-2">
                       <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">1</span>
-                      Add the Messenger product
+                      Agrega el producto Messenger
                     </span>
                   </AccordionTrigger>
                   <AccordionContent className="text-muted-foreground">
                     <ol className="list-decimal list-inside space-y-1 text-sm">
-                      <li>In your Meta App dashboard, click &quot;Add Product&quot;</li>
-                      <li>Find &quot;Messenger&quot; and click &quot;Set Up&quot;</li>
-                      <li>Under Access Tokens, generate a token for your Page</li>
+                      <li>En el panel de tu Meta App, haz clic en &quot;Add Product&quot;</li>
+                      <li>Busca &quot;Messenger&quot; y haz clic en &quot;Set Up&quot;</li>
+                      <li>En Access Tokens, genera un token para tu página</li>
                     </ol>
                   </AccordionContent>
                 </AccordionItem>
@@ -515,13 +515,13 @@ export function MessengerConfig() {
                   <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
                     <span className="flex items-center gap-2">
                       <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">2</span>
-                      Get your Page ID
+                      Obtén tu Page ID
                     </span>
                   </AccordionTrigger>
                   <AccordionContent className="text-muted-foreground">
                     <ol className="list-decimal list-inside space-y-1 text-sm">
-                      <li>Go to your Facebook Page &gt; About</li>
-                      <li>Copy the <strong className="text-foreground">Page ID</strong></li>
+                      <li>Ve a tu página de Facebook &gt; Información</li>
+                      <li>Copia el <strong className="text-foreground">Page ID</strong></li>
                     </ol>
                   </AccordionContent>
                 </AccordionItem>
@@ -530,16 +530,16 @@ export function MessengerConfig() {
                   <AccordionTrigger className="text-muted-foreground hover:text-foreground hover:no-underline">
                     <span className="flex items-center gap-2">
                       <span className="flex size-5 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">3</span>
-                      Configure the webhook
+                      Configura el webhook
                     </span>
                   </AccordionTrigger>
                   <AccordionContent className="text-muted-foreground">
                     <ol className="list-decimal list-inside space-y-1 text-sm">
-                      <li>In Messenger &gt; Settings, click &quot;Add Callback URL&quot;</li>
-                      <li>Paste the <strong className="text-foreground">Webhook Callback URL</strong> from above</li>
-                      <li>Enter the same <strong className="text-foreground">Verify Token</strong> you set here</li>
-                      <li>Subscribe to the &quot;messages&quot; webhook field</li>
-                      <li>Subscribe your Page to the app</li>
+                      <li>En Messenger &gt; Settings, haz clic en &quot;Add Callback URL&quot;</li>
+                      <li>Pega la <strong className="text-foreground">Webhook Callback URL</strong> de arriba</li>
+                      <li>Ingresa el mismo <strong className="text-foreground">Verify Token</strong> que configuraste aquí</li>
+                      <li>Suscríbete al campo de webhook &quot;messages&quot;</li>
+                      <li>Suscribe tu página a la app</li>
                     </ol>
                   </AccordionContent>
                 </AccordionItem>
@@ -553,7 +553,7 @@ export function MessengerConfig() {
                   className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-primary/80 transition-colors"
                 >
                   <ExternalLink className="size-3.5" />
-                  Meta Messenger Platform Documentation
+                  Documentación de la plataforma Meta Messenger
                 </a>
               </div>
             </CardContent>

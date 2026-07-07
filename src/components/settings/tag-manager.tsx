@@ -255,7 +255,7 @@ export function TagManager() {
           <DialogHeader>
             <DialogTitle>Eliminar etiqueta</DialogTitle>
             <DialogDescription>
-              ¿Eliminar la etiqueta "{tagToDelete?.name}"? Esto la quita
+              ¿Eliminar la etiqueta &quot;{tagToDelete?.name}&quot;? Esto la quita
               de todos los contactos y no se puede deshacer.
             </DialogDescription>
           </DialogHeader>

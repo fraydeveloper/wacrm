@@ -8,7 +8,7 @@ import { checkRateLimit, rateLimitResponse, RATE_LIMITS } from '@/lib/rate-limit
 import { encrypt, decrypt } from '@/lib/whatsapp/encryption'
 import { validateAiCredentials } from '@/lib/ai/validate'
 import { embedTexts } from '@/lib/ai/embeddings'
-import { AiError, AI_PROVIDERS, isAiProvider } from '@/lib/ai/types'
+import { AiError, AI_CHANNELS, AI_PROVIDERS, isAiProvider, type AiChannel } from '@/lib/ai/types'
 
 function bad(message: string) {
   return NextResponse.json({ error: message }, { status: 400 })
@@ -30,7 +30,7 @@ export async function GET() {
       // `api_key` is selected only to derive `has_key` — it is stripped
       // out below and never returned to the client.
       .select(
-        'provider, model, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, api_key, embeddings_api_key',
+        'provider, model, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, ai_channels_enabled, api_key, embeddings_api_key',
       )
       .eq('account_id', accountId)
       .maybeSingle()
@@ -95,6 +95,15 @@ export async function POST(request: Request) {
     if (!Number.isFinite(maxPer)) maxPer = 3
     maxPer = Math.min(20, Math.max(1, Math.floor(maxPer)))
 
+    // Which channels the bot may auto-reply on. Anything missing/invalid
+    // falls back to "all channels" — the same as not having the toggle at
+    // all, so a malformed request can't accidentally go-silent everywhere.
+    const channelsEnabled: AiChannel[] = Array.isArray(body.ai_channels_enabled)
+      ? body.ai_channels_enabled.filter((c: unknown): c is AiChannel =>
+          (AI_CHANNELS as string[]).includes(c as string),
+        )
+      : AI_CHANNELS
+
     const rawKey = typeof body.api_key === 'string' ? body.api_key.trim() : ''
 
     // Embeddings key (optional, for semantic KB search): a non-empty
@@ -146,6 +155,7 @@ export async function POST(request: Request) {
           isActive,
           autoReplyEnabled,
           autoReplyMaxPerConversation: maxPer,
+          channelsEnabled: [],
           embeddingsApiKey: null,
         })
       } catch (err) {
@@ -185,6 +195,7 @@ export async function POST(request: Request) {
       is_active: isActive,
       auto_reply_enabled: autoReplyEnabled,
       auto_reply_max_per_conversation: maxPer,
+      ai_channels_enabled: channelsEnabled,
     }
     if (rawEmbeddingsKey) {
       shared.embeddings_api_key = encrypt(rawEmbeddingsKey)

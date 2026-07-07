@@ -342,11 +342,11 @@ export function summarizeNode(node: BuilderNode): string | null {
       }, 0);
       if (text.length > 0) {
         return rowCount > 0
-          ? `${truncate(text, 50)} · ${rowCount} option${rowCount === 1 ? '' : 's'}`
+          ? `${truncate(text, 50)} · ${rowCount} opción${rowCount === 1 ? '' : 'es'}`
           : truncate(text);
       }
       return rowCount > 0
-        ? `${rowCount} option${rowCount === 1 ? '' : 's'} across ${sections.length} section${sections.length === 1 ? '' : 's'}`
+        ? `${rowCount} opción${rowCount === 1 ? '' : 'es'} en ${sections.length} sección${sections.length === 1 ? '' : 'es'}`
         : null;
     }
     case 'send_media': {
@@ -357,8 +357,8 @@ export function summarizeNode(node: BuilderNode): string | null {
       const caption = typeof cfg.caption === 'string' ? cfg.caption : '';
       const label = mediaType
         ? mediaType.charAt(0).toUpperCase() + mediaType.slice(1)
-        : 'Media';
-      if (!url) return `${label} (no file uploaded)`;
+        : 'Multimedia';
+      if (!url) return `${label} (sin archivo subido)`;
       const name = filename || url.split('/').pop() || 'file';
       return caption
         ? `${label}: ${truncate(name, 30)} · ${truncate(caption, 40)}`
