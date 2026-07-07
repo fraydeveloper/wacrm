@@ -159,6 +159,10 @@ export interface Conversation {
   last_message_text?: string;
   last_message_at?: string;
   unread_count: number;
+  /** Sticky per-conversation kill switch for the AI auto-reply bot — set
+   *  automatically when the model hands off, or manually via the "Modo
+   *  humano" toggle in the inbox. */
+  ai_autoreply_disabled: boolean;
   created_at: string;
   updated_at: string;
   contact?: Contact;

@@ -26,7 +26,9 @@ import {
   RefreshCw,
   PanelRightOpen,
   PanelRightClose,
+  UserCog,
 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { format, isToday, isYesterday, differenceInHours } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -75,6 +77,8 @@ interface MessageThreadProps {
     conversationId: string,
     assignedAgentId: string | null,
   ) => void;
+  /** Fired when the "Modo humano" toggle flips `ai_autoreply_disabled`. */
+  onAiModeChange: (conversationId: string, disabled: boolean) => void;
   /**
    * On mobile, the thread is shown full-screen with the conversation list
    * hidden. This callback lets the page deselect the active conversation
@@ -160,6 +164,7 @@ export function MessageThread({
   onUpdateMessage,
   onStatusChange,
   onAssignChange,
+  onAiModeChange,
   onBack,
   resyncToken = 0,
   onRefresh,
@@ -779,6 +784,41 @@ export function MessageThread({
     [conversation, onAssignChange],
   );
 
+  /**
+   * "Modo humano" toggle — directly flips `conversations.ai_autoreply_disabled`.
+   * ON (disabled=true) silences the AI bot for this thread immediately,
+   * the same sticky gate the bot sets on itself when it hands off
+   * (`src/lib/ai/auto-reply.ts`); OFF (disabled=false) is the only way to
+   * undo that handoff today — there was previously no UI for it at all.
+   * Independent of "Assign": a thread can be assigned to a human AND
+   * still have the AI answering, or vice versa.
+   */
+  const handleAiModeChange = useCallback(
+    async (humanModeOn: boolean) => {
+      if (!conversation) return;
+
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("conversations")
+        .update({ ai_autoreply_disabled: humanModeOn })
+        .eq("id", conversation.id);
+
+      if (error) {
+        console.error("Failed to update AI mode:", error);
+        toast.error("No se pudo actualizar el modo humano");
+        return;
+      }
+
+      toast.success(
+        humanModeOn
+          ? "Modo humano activado: la IA dejó de responder en este chat"
+          : "IA reactivada: volverá a responder automáticamente en este chat",
+      );
+      onAiModeChange(conversation.id, humanModeOn);
+    },
+    [conversation, onAiModeChange],
+  );
+
   // Empty state — same WhatsApp-style doodle background as the active
   // thread below, so swapping between empty/selected doesn't change the
   // pattern under the user's eye.
@@ -998,8 +1038,66 @@ export function MessageThread({
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Modo humano — manually silence/reactivate the AI bot for this
+              thread. Directly controls the same `ai_autoreply_disabled`
+              flag the bot sets on itself when it hands off; this is the
+              only UI for turning it back off. Label text itself states
+              the current effect (not just the setting name) so the agent
+              doesn't have to infer what ON/OFF means. */}
+          <div
+            className="flex items-center gap-1.5 rounded-md px-1.5"
+            title={
+              conversation.ai_autoreply_disabled
+                ? "La IA no responderá en esta conversación. Desactiva para que vuelva a responder."
+                : "La IA puede responder automáticamente en esta conversación. Activa para silenciarla."
+            }
+          >
+            <UserCog
+              className={cn(
+                "h-3.5 w-3.5 shrink-0",
+                conversation.ai_autoreply_disabled
+                  ? "text-primary"
+                  : "text-muted-foreground",
+              )}
+            />
+            <span
+              className={cn(
+                "hidden text-xs sm:inline",
+                conversation.ai_autoreply_disabled
+                  ? "font-medium text-primary"
+                  : "text-muted-foreground",
+              )}
+            >
+              {conversation.ai_autoreply_disabled ? "Modo humano ON" : "Modo humano"}
+            </span>
+            <Switch
+              checked={conversation.ai_autoreply_disabled}
+              onCheckedChange={(checked: boolean) => void handleAiModeChange(checked)}
+            />
+          </div>
         </div>
       </div>
+
+      {/* Banner reinforcing the toggle above — the header control is small
+          and easy to miss, so when human mode is on we repeat the state
+          in a full-width, unmissable strip right above the messages,
+          with the same action available inline. */}
+      {conversation.ai_autoreply_disabled && (
+        <div className="flex items-center justify-between gap-3 border-b border-primary/20 bg-primary/10 px-4 py-2">
+          <span className="flex items-center gap-2 text-xs text-primary">
+            <UserCog className="h-3.5 w-3.5 shrink-0" />
+            Modo humano activo — la IA no está respondiendo en este chat.
+          </span>
+          <button
+            type="button"
+            onClick={() => void handleAiModeChange(false)}
+            className="shrink-0 text-xs font-medium text-primary underline-offset-2 hover:underline"
+          >
+            Reactivar IA
+          </button>
+        </div>
+      )}
 
       {/* Messages Area */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 py-4">

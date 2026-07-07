@@ -15,6 +15,7 @@ function makeConversation(
     channel: "whatsapp",
     status: "open",
     unread_count: 0,
+    ai_autoreply_disabled: false,
     created_at: "",
     updated_at: "",
     contact: contact
@@ -110,6 +111,7 @@ describe("normalizeConversation", () => {
       channel: "whatsapp" as const,
       status: "open" as const,
       unread_count: 0,
+      ai_autoreply_disabled: false,
       created_at: "",
       updated_at: "",
       contact: {
@@ -138,6 +140,7 @@ describe("normalizeConversation", () => {
       channel: "whatsapp" as const,
       status: "open" as const,
       unread_count: 0,
+      ai_autoreply_disabled: false,
       created_at: "",
       updated_at: "",
       contact: null,
