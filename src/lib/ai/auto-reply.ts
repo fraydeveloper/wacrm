@@ -5,7 +5,7 @@ import { retrieveKnowledge } from './knowledge'
 import { generateReply } from './generate'
 import { buildSystemPrompt } from './defaults'
 import { latestUserMessage } from './query'
-import { engineSendText } from '@/lib/flows/meta-send'
+import { sendChannelText } from '@/lib/channels/router'
 
 interface DispatchArgs {
   /** Tenancy key — drives config, contact, and whatsapp_config lookups. */
@@ -66,7 +66,7 @@ export async function dispatchInboundToAiReply(
 
     const { data: conv, error: convErr } = await db
       .from('conversations')
-      .select('assigned_agent_id, ai_autoreply_disabled, ai_reply_count')
+      .select('channel, assigned_agent_id, ai_autoreply_disabled, ai_reply_count')
       .eq('id', conversationId)
       .maybeSingle()
     if (convErr || !conv) return
@@ -124,7 +124,8 @@ export async function dispatchInboundToAiReply(
     )
     if (claimErr || claimed !== true) return
 
-    await engineSendText({
+    await sendChannelText({
+      channel: conv.channel,
       accountId,
       userId: configOwnerUserId,
       conversationId,

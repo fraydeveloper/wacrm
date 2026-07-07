@@ -82,6 +82,7 @@ function aiConfig(overrides: Partial<AiConfig> = {}): AiConfig {
 
 beforeEach(() => {
   h.state.conv = {
+    channel: 'whatsapp',
     assigned_agent_id: null,
     ai_autoreply_disabled: false,
     ai_reply_count: 0,

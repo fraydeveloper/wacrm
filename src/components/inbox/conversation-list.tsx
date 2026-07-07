@@ -20,6 +20,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ChannelBadge } from "@/components/inbox/channel-badge";
 
 interface ConversationListProps {
   activeConversationId: string | null;
@@ -466,8 +467,11 @@ function ConversationItem({
       {/* Content */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center justify-between gap-2">
-          <span className="truncate text-sm font-medium text-foreground">
-            {displayName}
+          <span className="flex min-w-0 items-center gap-1.5">
+            <ChannelBadge channel={conversation.channel} />
+            <span className="truncate text-sm font-medium text-foreground">
+              {displayName}
+            </span>
           </span>
           <span className="shrink-0 text-[10px] text-muted-foreground">{timeAgo}</span>
         </div>
