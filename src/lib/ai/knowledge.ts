@@ -14,6 +14,16 @@ interface MatchRow {
   content: string
 }
 
+// "Small knowledge base" thresholds for the whole-document short-circuit
+// in `retrieveKnowledge`. A KB with at most this many chunks whose total
+// text fits the char budget is injected in full rather than retrieved.
+// ~24k chars ≈ 6k tokens — comfortable for gpt-4o-mini / haiku (both
+// 100k+ context) on top of the conversation and reply. At the default
+// 1200-char chunk size, 40 chunks caps this path near the budget anyway;
+// the char check is the real guard. Tunable if KBs grow.
+const FULL_KB_MAX_CHUNKS = 40
+const FULL_KB_CHAR_BUDGET = 24_000
+
 /**
  * (Re)build the chunks for one document. Deletes the document's
  * existing chunks, re-chunks the content, and — when the account has an
@@ -95,14 +105,47 @@ export async function retrieveKnowledge(
   // every draft / auto-reply would pay for a query embedding + two RPCs
   // just to get []. One cheap indexed COUNT (head, no rows) instead of a
   // paid embeddings call on the hot path.
+  let totalChunks = 0
   try {
     const { count, error } = await db
       .from('ai_knowledge_chunks')
       .select('id', { count: 'exact', head: true })
       .eq('account_id', accountId)
     if (error || !count) return []
+    totalChunks = count
   } catch {
     return []
+  }
+
+  // Small knowledge base → feed the WHOLE thing, in document order,
+  // instead of retrieving a handful of chunks. Lexical FTS (the only
+  // path without an embeddings key) matches exact tokens only — no
+  // stemming or synonyms — so a question phrased differently from the
+  // document ("¿dónde están ubicados?" vs. a "Ubicaciones" heading,
+  // "docentes" vs. "profesores") silently retrieves nothing and the bot
+  // answers "no tengo esa información" even though the doc covers it.
+  // When the KB is small enough to fit the prompt budget, this makes the
+  // model read the entire document and answer regardless of phrasing —
+  // exactly what a single uploaded FAQ/business doc needs, with no
+  // embeddings key required. Larger KBs fall through to hybrid retrieval.
+  if (totalChunks <= FULL_KB_MAX_CHUNKS) {
+    try {
+      const { data, error } = await db
+        .from('ai_knowledge_chunks')
+        .select('content')
+        .eq('account_id', accountId)
+        .order('document_id', { ascending: true })
+        .order('chunk_index', { ascending: true })
+        .limit(FULL_KB_MAX_CHUNKS)
+      if (!error && Array.isArray(data) && data.length > 0) {
+        const all = (data as { content: string }[]).map((r) => r.content)
+        const totalChars = all.reduce((n, c) => n + c.length, 0)
+        if (totalChars <= FULL_KB_CHAR_BUDGET) return all
+        // Too large for the budget after all — fall through to retrieval.
+      }
+    } catch (err) {
+      console.error('[ai knowledge] full-KB load failed, falling back to retrieval:', err)
+    }
   }
 
   const picked = new Map<string, string>() // id → content, preserves order

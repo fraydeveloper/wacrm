@@ -799,9 +799,21 @@ export function MessageThread({
       if (!conversation) return;
 
       const supabase = createClient();
+      // Reactivating the AI (human mode OFF) must also reset the
+      // per-conversation reply counter. `ai_reply_count` accumulates over
+      // the thread's lifetime and the bot goes silent once it reaches
+      // `auto_reply_max_per_conversation` (default 3). Clearing only the
+      // disable flag leaves an exhausted counter, so the bot stays mute
+      // even though "Modo IA" is on — which looks exactly like the toggle
+      // broke the bot. Turning it back on gives the bot a clean slate.
+      const update: { ai_autoreply_disabled: boolean; ai_reply_count?: number } = {
+        ai_autoreply_disabled: humanModeOn,
+      };
+      if (!humanModeOn) update.ai_reply_count = 0;
+
       const { error } = await supabase
         .from("conversations")
-        .update({ ai_autoreply_disabled: humanModeOn })
+        .update(update)
         .eq("id", conversation.id);
 
       if (error) {

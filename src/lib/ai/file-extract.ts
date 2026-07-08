@@ -31,6 +31,17 @@ function extensionOf(filename: string): string {
  * passed in explicitly. Requiring `pdf-parse/worker` before `pdf-parse`
  * and forwarding its `CanvasFactory` is the fix documented by the
  * package itself.
+ *
+ * Separately, pdfjs-dist also needs its *own* worker script. By default
+ * it resolves that as a file on disk next to the module
+ * (`pdf.worker.mjs`) — Vercel's output-file-tracing doesn't always ship
+ * that file into the deployed function (it's reached via a dynamically
+ * computed path, not a statically analyzable import), which surfaces as
+ * "Setting up fake worker failed: Cannot find module .../pdf.worker.mjs"
+ * at request time even though the build itself succeeds. `getData()`
+ * returns the worker's source *inlined as a string* (no separate file
+ * needed at runtime), and `PDFParse.setWorker(...)` installs it — the
+ * fix documented by the package for this exact serverless failure.
  */
 export async function extractTextFromFile(
   filename: string,
@@ -45,21 +56,25 @@ export async function extractTextFromFile(
   if (ext === 'pdf') {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { CanvasFactory } = require('pdf-parse/worker') as typeof import('pdf-parse/worker')
+      const { CanvasFactory, getData } = require('pdf-parse/worker') as typeof import('pdf-parse/worker')
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       const pdfParseModule = require('pdf-parse') as typeof import('pdf-parse')
       // pdf-parse v2.x exports a named class PDFParse; v1.x exports a
       // default function. Support both shapes so an upgrade/downgrade
       // doesn't silently break.
       const { PDFParse } = pdfParseModule as unknown as {
-        PDFParse: new (opts: {
-          data: Buffer | Uint8Array
-          CanvasFactory?: unknown
-        }) => {
-          getText(): Promise<{ text: string }>
-          destroy(): Promise<void>
+        PDFParse: {
+          new (opts: {
+            data: Buffer | Uint8Array
+            CanvasFactory?: unknown
+          }): {
+            getText(): Promise<{ text: string }>
+            destroy(): Promise<void>
+          }
+          setWorker(workerSrc?: string): string
         }
       }
+      PDFParse.setWorker(getData())
 
       const parser = new PDFParse({ data: buffer, CanvasFactory })
       try {
