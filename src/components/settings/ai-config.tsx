@@ -26,15 +26,15 @@ import {
 } from '@/components/ui/select';
 import { SettingsPanelHead } from './settings-panel-head';
 import { AiKnowledgeCard } from './ai-knowledge';
-import { AI_PROVIDER_DEFAULT_MODEL } from '@/lib/ai/defaults';
+import { AI_PROVIDER_DEFAULT_MODEL, DEFAULT_HANDOFF_MESSAGE } from '@/lib/ai/defaults';
 import { AI_PROVIDERS, type AiChannel, type AiProvider } from '@/lib/ai/types';
 
 const MASKED_KEY = '••••••••••••••••';
 
-// Only channels with a real send path today (see src/lib/channels/router.ts)
-// — Instagram/Telegram are reserved enum values with no working sender yet,
-// so a toggle for them would be dead UI.
-const TOGGLEABLE_CHANNELS: AiChannel[] = ['whatsapp', 'messenger'];
+// Only channels with a real send path today (see src/lib/channels/router.ts).
+// Instagram is still a reserved enum value with no working sender yet, so a
+// toggle for it would be dead UI.
+const TOGGLEABLE_CHANNELS: AiChannel[] = ['whatsapp', 'messenger', 'telegram'];
 
 const CHANNEL_LABEL: Record<AiChannel, string> = {
   whatsapp: 'WhatsApp',
@@ -83,6 +83,8 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
   const [autoReplyEnabled, setAutoReplyEnabled] = useState(false);
   const [maxPerConversation, setMaxPerConversation] = useState(3);
   const [channelsEnabled, setChannelsEnabled] = useState<AiChannel[]>(TOGGLEABLE_CHANNELS);
+  const [handoffMessage, setHandoffMessage] = useState('');
+  const [handoffNotifyNumber, setHandoffNotifyNumber] = useState('');
 
   // Guard keyed on the account (not a bare boolean) so an in-place
   // account switch — ownership transfer, multi-account membership —
@@ -112,6 +114,8 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
             ? data.ai_channels_enabled
             : TOGGLEABLE_CHANNELS,
         );
+        setHandoffMessage(data.handoff_message ?? '');
+        setHandoffNotifyNumber(data.handoff_notify_number ?? '');
         setHasStoredKey(Boolean(data.has_key));
         setApiKey(data.has_key ? MASKED_KEY : '');
         setKeyEdited(false);
@@ -164,6 +168,8 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
     auto_reply_enabled: autoReplyEnabled,
     auto_reply_max_per_conversation: maxPerConversation,
     ai_channels_enabled: channelsEnabled,
+    handoff_message: handoffMessage.trim() || null,
+    handoff_notify_number: handoffNotifyNumber.trim() || null,
   });
 
   const handleTest = async () => {
@@ -233,6 +239,8 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
         setAutoReplyEnabled(false);
         setChannelsEnabled(TOGGLEABLE_CHANNELS);
         setSystemPrompt('');
+        setHandoffMessage('');
+        setHandoffNotifyNumber('');
         onConfigSaved?.();
       } else {
         const data = await res.json();
@@ -528,6 +536,59 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
                 disabled={disabled || !autoReplyEnabled}
                 className="w-20"
               />
+            </div>
+
+            {/* Human handoff — what the bot says + who it pings when it
+                can't safely answer and hands the thread to a person. */}
+            <div className="rounded-md border border-border p-3 space-y-4">
+              <div>
+                <p className="text-sm font-medium text-foreground">
+                  Derivación a un humano
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Cuando la IA no puede responder con seguridad, envía este
+                  mensaje al cliente, pausa el bot en ese chat (queda en
+                  &quot;Modo humano&quot;) y avisa a tu equipo.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ai-handoff-msg">Mensaje para el cliente</Label>
+                <Textarea
+                  id="ai-handoff-msg"
+                  value={handoffMessage}
+                  onChange={(e) => setHandoffMessage(e.target.value)}
+                  placeholder={DEFAULT_HANDOFF_MESSAGE}
+                  rows={3}
+                  disabled={disabled}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Déjalo en blanco para usar el mensaje por defecto (menciona a
+                  Max Patricio y su WhatsApp).
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="ai-handoff-notify">
+                  Notificar a este WhatsApp{' '}
+                  <span className="font-normal text-muted-foreground">
+                    (opcional)
+                  </span>
+                </Label>
+                <Input
+                  id="ai-handoff-notify"
+                  value={handoffNotifyNumber}
+                  onChange={(e) => setHandoffNotifyNumber(e.target.value)}
+                  placeholder="+51 989 377 295"
+                  disabled={disabled}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Se enviará un aviso por WhatsApp a este número para que un
+                  humano atienda. Además, siempre aparece una notificación en la
+                  campana para admins y propietarios. El aviso por WhatsApp solo
+                  llega dentro de la ventana de 24&nbsp;h de sesión de Meta.
+                </p>
+              </div>
             </div>
           </CardContent>
         </Card>

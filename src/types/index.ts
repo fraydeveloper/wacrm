@@ -172,7 +172,7 @@ export interface Conversation {
 // Notifications (migration 027)
 // ============================================================
 
-export type NotificationType = 'conversation_assigned';
+export type NotificationType = 'conversation_assigned' | 'ai_handoff';
 
 export interface Notification {
   id: string;
@@ -264,6 +264,16 @@ export interface MessengerConfig {
   page_id: string;
   page_access_token: string;
   verify_token?: string;
+  status: 'connected' | 'disconnected';
+  connected_at?: string;
+}
+
+export interface TelegramConfig {
+  id: string;
+  user_id: string;
+  bot_token: string;
+  bot_username?: string;
+  bot_id?: string;
   status: 'connected' | 'disconnected';
   connected_at?: string;
 }

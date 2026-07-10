@@ -3,9 +3,10 @@ import { loadAiConfig } from './config'
 import { buildConversationContext } from './context'
 import { retrieveKnowledge } from './knowledge'
 import { generateReply } from './generate'
-import { buildSystemPrompt } from './defaults'
+import { buildSystemPrompt, DEFAULT_HANDOFF_MESSAGE } from './defaults'
 import { latestUserMessage } from './query'
 import { sendChannelText } from '@/lib/channels/router'
+import { notifyHumanOfHandoff } from './handoff-notify'
 
 interface DispatchArgs {
   /** Tenancy key — drives config, contact, and whatsapp_config lookups. */
@@ -102,13 +103,44 @@ export async function dispatchInboundToAiReply(
     })
 
     if (handoff || !text) {
-      // The model can't (or shouldn't) answer — stop auto-replying on
-      // this thread and leave the inbound unanswered so it surfaces in
-      // the inbox for a human. Sticky until an admin re-enables.
+      // The model can't (or shouldn't) answer. Instead of going silent,
+      // tell the customer a human will follow up (with a real contact),
+      // ping the team, then hand the thread off: flip
+      // `ai_autoreply_disabled` so the bot stands down and the inbox's
+      // "Modo humano" takes over. Sticky until an admin re-enables.
+      const handoffMessage =
+        config.handoffMessage?.trim() || DEFAULT_HANDOFF_MESSAGE
+
+      // Flip the flag FIRST so a racing concurrent inbound can't also
+      // enter this branch and double-send the handoff message.
       await db
         .from('conversations')
         .update({ ai_autoreply_disabled: true })
         .eq('id', conversationId)
+
+      // Speak the handoff to the customer (best-effort — a send failure
+      // must not stop the human notification below).
+      try {
+        await sendChannelText({
+          channel: conv.channel,
+          accountId,
+          userId: configOwnerUserId,
+          conversationId,
+          contactId,
+          text: handoffMessage,
+        })
+      } catch (sendErr) {
+        console.error('[ai auto-reply] failed to send handoff message:', sendErr)
+      }
+
+      // Alert a human (in-app bell + optional WhatsApp ping). Never throws.
+      await notifyHumanOfHandoff({
+        accountId,
+        conversationId,
+        contactId,
+        channel: conv.channel,
+        notifyNumber: config.handoffNotifyNumber,
+      })
       return
     }
 

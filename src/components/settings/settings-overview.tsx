@@ -15,6 +15,12 @@ import { cn } from '@/lib/utils';
 import { SECTION_META, type SettingsSection } from './settings-sections';
 import { SettingsChip, StatusDot } from './settings-chip';
 import { ROLE_META } from './role-meta';
+import {
+  CHANNELS,
+  CHANNEL_STATE_META,
+  type ChannelId,
+  type ChannelState,
+} from './channel-status';
 
 interface OverviewCounts {
   members: number | null;
@@ -25,9 +31,24 @@ interface OverviewCounts {
   customFields: number | null;
 }
 
-interface WhatsAppStatus {
-  configured: boolean;
-  connected: boolean;
+/** Live-checked channels. Instagram is pinned to `coming_soon` in
+ *  CHANNELS and never health-checked. */
+type LiveChannelId = Extract<ChannelId, 'whatsapp' | 'messenger' | 'telegram'>;
+
+/**
+ * Collapse a config health-check response into a channel state. Both
+ * /api/whatsapp/config and /api/messenger/config share this
+ * `{ connected, reason }` shape, so one mapper covers both.
+ */
+function stateFromHealth(payload: {
+  connected?: boolean;
+  reason?: string;
+}): ChannelState {
+  if (payload.connected) return 'connected';
+  if (payload.reason === 'no_config' || payload.reason === 'no_account') {
+    return 'not_configured';
+  }
+  return 'disconnected';
 }
 
 export function SettingsOverview({
@@ -41,19 +62,22 @@ export function SettingsOverview({
 
   const [counts, setCounts] = useState<OverviewCounts | null>(null);
   const [countsLoading, setCountsLoading] = useState(true);
-  // WhatsApp status is tracked separately: its health check decrypts the
+  // Channel statuses are tracked separately: each health check decrypts a
   // token and pings Meta, which is far slower than the cheap count
-  // queries. Gating it independently keeps a slow/flaky Meta round-trip
-  // from blanking the rest of the landing.
-  const [whatsapp, setWhatsapp] = useState<WhatsAppStatus | null>(null);
-  const [whatsappLoading, setWhatsappLoading] = useState(true);
+  // queries. Gating them independently keeps a slow/flaky Meta round-trip
+  // from blanking the rest of the landing. Instagram/Telegram aren't
+  // health-checked — they render as "Próximamente" straight from CHANNELS.
+  const [channels, setChannels] = useState<Record<LiveChannelId, ChannelState>>({
+    whatsapp: 'loading',
+    messenger: 'loading',
+    telegram: 'loading',
+  });
 
   useEffect(() => {
     if (!user || !accountId) return;
     let cancelled = false;
     const supabase = createClient();
     const userId = user.id;
-    const acctId = accountId;
 
     // Cheap counts — resolve fast, render immediately.
     (async () => {
@@ -113,23 +137,25 @@ export function SettingsOverview({
       setCountsLoading(false);
     })();
 
-    // WhatsApp connection status — slower, independent.
+    // Channel connection status — slower, independent. Each health
+    // endpoint returns `{ connected, reason }` and never throws, so a
+    // failed check degrades to "Desconectado" rather than blanking.
     (async () => {
-      setWhatsappLoading(true);
-      const [row, health] = await Promise.allSettled([
-        supabase
-          .from('whatsapp_config')
-          .select('phone_number_id')
-          .eq('account_id', acctId)
-          .maybeSingle(),
+      setChannels({ whatsapp: 'loading', messenger: 'loading', telegram: 'loading' });
+      const [wa, msgr, tg] = await Promise.allSettled([
         fetch('/api/whatsapp/config', { cache: 'no-store' }).then((r) => r.json()),
+        fetch('/api/messenger/config', { cache: 'no-store' }).then((r) => r.json()),
+        fetch('/api/telegram/config', { cache: 'no-store' }).then((r) => r.json()),
       ]);
       if (cancelled) return;
-      setWhatsapp({
-        configured: row.status === 'fulfilled' && !!row.value.data?.phone_number_id,
-        connected: health.status === 'fulfilled' && !!health.value?.connected,
+      setChannels({
+        whatsapp:
+          wa.status === 'fulfilled' ? stateFromHealth(wa.value) : 'disconnected',
+        messenger:
+          msgr.status === 'fulfilled' ? stateFromHealth(msgr.value) : 'disconnected',
+        telegram:
+          tg.status === 'fulfilled' ? stateFromHealth(tg.value) : 'disconnected',
       });
-      setWhatsappLoading(false);
     })();
 
     return () => {
@@ -154,21 +180,6 @@ export function SettingsOverview({
     loading: boolean;
     subtitle: ReactNode;
   }[] = [
-    {
-      section: 'whatsapp',
-      loading: whatsappLoading,
-      subtitle: !whatsapp?.configured ? (
-        'Aún no configurado'
-      ) : whatsapp.connected ? (
-        <>
-          <StatusDot tone="ok" /> Conectado
-        </>
-      ) : (
-        <>
-          <StatusDot tone="muted" /> Necesita reconectarse
-        </>
-      ),
-    },
     {
       section: 'members',
       loading: countsLoading,
@@ -249,8 +260,69 @@ export function SettingsOverview({
         ) : null}
       </Card>
 
+      {/* Channels — connection status per messaging channel. WhatsApp +
+          Messenger show a live state; Instagram/Telegram are reserved but
+          not wired up yet, so they read "Próximamente". */}
+      <div className="mt-6">
+        <div className="mb-2.5 flex items-center gap-2 px-0.5">
+          <h2 className="text-sm font-semibold text-foreground">Canales</h2>
+          <span className="text-xs text-muted-foreground">
+            Estado de conexión de cada red
+          </span>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {CHANNELS.map((ch) => {
+            const Icon = ch.icon;
+            const state: ChannelState = ch.available
+              ? channels[ch.id as LiveChannelId]
+              : 'coming_soon';
+            const loading = state === 'loading';
+            const meta = loading ? null : CHANNEL_STATE_META[state];
+            const clickable = ch.section != null && ch.available;
+            return (
+              <button
+                key={ch.id}
+                type="button"
+                disabled={!clickable}
+                onClick={() => ch.section && onSelect(ch.section)}
+                className={cn(
+                  'group flex items-start gap-3.5 rounded-xl border border-border bg-card p-4 text-left transition-colors',
+                  clickable
+                    ? 'hover:border-primary-soft-2 hover:bg-card-2'
+                    : 'cursor-default opacity-90',
+                )}
+              >
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary">
+                  <Icon className="size-4" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-foreground">
+                    {ch.label}
+                  </span>
+                  <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    {loading ? (
+                      <>
+                        <Loader2 className="size-3 animate-spin" /> Cargando…
+                      </>
+                    ) : (
+                      <>
+                        {meta!.showDot ? <StatusDot tone={meta!.tone} /> : null}
+                        {meta!.label}
+                      </>
+                    )}
+                  </span>
+                </span>
+                {clickable ? (
+                  <ChevronRight className="size-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Status tiles */}
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {tiles.map(({ section, loading, subtitle }) => {
           const meta = SECTION_META[section];
           const Icon = meta.icon;

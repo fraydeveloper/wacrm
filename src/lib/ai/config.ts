@@ -12,10 +12,12 @@ interface AiConfigRow {
   auto_reply_max_per_conversation: number
   embeddings_api_key: string | null
   ai_channels_enabled: AiChannel[] | null
+  handoff_message: string | null
+  handoff_notify_number: string | null
 }
 
 const CONFIG_COLUMNS =
-  'provider, model, api_key, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, embeddings_api_key, ai_channels_enabled'
+  'provider, model, api_key, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, embeddings_api_key, ai_channels_enabled, handoff_message, handoff_notify_number'
 
 /**
  * Load and decrypt the account's AI config for *use* (draft or
@@ -82,6 +84,8 @@ export async function loadAiConfig(
     // here means a stale row degrades to "all channels" — today's actual
     // behavior — rather than silently muting the bot everywhere.
     channelsEnabled: row.ai_channels_enabled ?? AI_CHANNELS,
+    handoffMessage: row.handoff_message ?? null,
+    handoffNotifyNumber: row.handoff_notify_number ?? null,
     embeddingsApiKey,
   }
 }

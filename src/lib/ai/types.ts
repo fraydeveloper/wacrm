@@ -36,6 +36,12 @@ export interface AiConfig {
   /** Channels the auto-reply bot is allowed to answer on. The manual
    *  "Draft with AI" button ignores this — it only gates the bot. */
   channelsEnabled: AiChannel[]
+  /** Message sent to the customer when the bot hands off to a human.
+   *  null → use DEFAULT_HANDOFF_MESSAGE. */
+  handoffMessage: string | null
+  /** Optional WhatsApp number (E.164) alerted best-effort on handoff so
+   *  a human knows a conversation needs attention. null → no alert. */
+  handoffNotifyNumber: string | null
   /** Optional OpenAI-compatible key for embeddings. When set, the
    *  knowledge base is embedded and semantic retrieval turns on; when
    *  null, retrieval falls back to lexical full-text search. */

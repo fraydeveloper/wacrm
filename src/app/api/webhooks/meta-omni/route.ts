@@ -100,7 +100,18 @@ export async function POST(request: Request) {
   const signature = request.headers.get('x-hub-signature-256')
 
   if (!verifyMetaWebhookSignature(rawBody, signature)) {
-    console.warn('[meta-omni webhook] rejected request with invalid signature')
+    // The single most common reason Messenger "doesn't respond" while
+    // WhatsApp works: the Facebook Page and the WhatsApp number live in
+    // DIFFERENT Meta apps, so this POST is signed with a different App
+    // Secret than the one in META_APP_SECRET — every Messenger event is
+    // dropped here before it ever reaches the AI. Put both products under
+    // the same Meta app (or point META_APP_SECRET at the app that owns
+    // the Page). See docs/messenger-troubleshooting.md.
+    console.warn(
+      '[meta-omni webhook] rejected request with invalid signature — ' +
+        'the signing App Secret does not match META_APP_SECRET. Confirm the ' +
+        'Facebook Page and WhatsApp number are in the SAME Meta app.',
+    )
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
   }
 
@@ -165,6 +176,16 @@ async function processWebhook(body: MessengerWebhookBody) {
       // are out of scope for this first pass; only plain text lands.
       if (item.message?.is_echo) continue
       if (!item.message?.text) continue
+
+      // Breadcrumb so "Messenger isn't responding" is diagnosable from
+      // the server logs: if you DON'T see this line when you send a
+      // message, the event never reached the app (webhook not subscribed
+      // to the `messages` field, or signature rejected above). If you DO
+      // see it but no reply goes out, the issue is downstream (AI paused
+      // for Messenger, or the Send API rejecting the outbound).
+      console.log(
+        `[meta-omni webhook] inbound Messenger text from PSID ${item.sender.id} on page ${pageId}`,
+      )
 
       await ingestInboundMessage({
         accountId: config.account_id,

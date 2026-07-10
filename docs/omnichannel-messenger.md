@@ -6,8 +6,9 @@ Every conversation and message now carries a `channel` column
 messages from any channel flow through the same shared core before
 reaching the same RAG/AI reply engine.
 
-> **Status:** WhatsApp and Messenger are live. Instagram Direct and
-> Telegram share the same foundation but don't have a webhook/adapter
+> **Status:** WhatsApp, Messenger and **Telegram** are live (see
+> [docs/telegram-setup.md](./telegram-setup.md) for Telegram). Instagram
+> Direct shares the same foundation but doesn't have a webhook/adapter
 > yet — see [Adding a new channel](#adding-a-new-channel) below.
 
 ## What's shared across every channel

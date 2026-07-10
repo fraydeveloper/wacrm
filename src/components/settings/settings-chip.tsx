@@ -43,12 +43,27 @@ export function SettingsChip({
   );
 }
 
-/** A small live status dot (e.g. WhatsApp connected indicator). */
+/**
+ * A small live status dot (e.g. WhatsApp connected indicator).
+ *
+ * Tones map to the channel-status states surfaced in the Overview:
+ *   ok     → Conectado (emerald)
+ *   danger → Desconectado / necesita atención (red)
+ *   muted  → No configurado / Próximamente (neutral)
+ */
+export type StatusTone = 'ok' | 'danger' | 'muted';
+
+const DOT_TONES: Record<StatusTone, string> = {
+  ok: 'bg-emerald-500',
+  danger: 'bg-red-500',
+  muted: 'bg-muted-foreground',
+};
+
 export function StatusDot({
   tone = 'ok',
   className,
 }: {
-  tone?: 'ok' | 'muted';
+  tone?: StatusTone;
   className?: string;
 }) {
   return (
@@ -56,7 +71,7 @@ export function StatusDot({
       aria-hidden
       className={cn(
         'inline-block size-1.5 shrink-0 rounded-full',
-        tone === 'ok' ? 'bg-emerald-500' : 'bg-muted-foreground',
+        DOT_TONES[tone],
         className,
       )}
     />

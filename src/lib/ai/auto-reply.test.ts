@@ -8,6 +8,7 @@ const h = vi.hoisted(() => ({
   retrieveKnowledge: vi.fn(),
   generateReply: vi.fn(),
   engineSendText: vi.fn(),
+  notifyHumanOfHandoff: vi.fn(),
   state: {
     conv: null as Record<string, unknown> | null,
     autoResponders: [] as { id: string }[],
@@ -22,6 +23,7 @@ vi.mock('./context', () => ({ buildConversationContext: h.buildConversationConte
 vi.mock('./knowledge', () => ({ retrieveKnowledge: h.retrieveKnowledge }))
 vi.mock('./generate', () => ({ generateReply: h.generateReply }))
 vi.mock('@/lib/flows/meta-send', () => ({ engineSendText: h.engineSendText }))
+vi.mock('./handoff-notify', () => ({ notifyHumanOfHandoff: h.notifyHumanOfHandoff }))
 vi.mock('./admin-client', () => ({
   supabaseAdmin: () => ({
     from: (table: string) => {
@@ -76,6 +78,8 @@ function aiConfig(overrides: Partial<AiConfig> = {}): AiConfig {
     autoReplyEnabled: true,
     autoReplyMaxPerConversation: 3,
     channelsEnabled: ['whatsapp', 'messenger', 'instagram', 'telegram'],
+    handoffMessage: null,
+    handoffNotifyNumber: null,
     embeddingsApiKey: null,
     ...overrides,
   }
@@ -97,6 +101,7 @@ beforeEach(() => {
   h.retrieveKnowledge.mockResolvedValue([])
   h.generateReply.mockResolvedValue({ text: 'Hello!', handoff: false })
   h.engineSendText.mockResolvedValue({ whatsapp_message_id: 'm1' })
+  h.notifyHumanOfHandoff.mockResolvedValue(undefined)
 })
 
 describe('dispatchInboundToAiReply — eligibility gates', () => {
@@ -203,11 +208,32 @@ describe('dispatchInboundToAiReply — eligibility gates', () => {
 })
 
 describe('dispatchInboundToAiReply — handoff', () => {
-  it('disables auto-reply and does not send on handoff', async () => {
+  it('disables auto-reply, sends the handoff message, and notifies a human', async () => {
     h.generateReply.mockResolvedValue({ text: '', handoff: true })
     await dispatchInboundToAiReply(ARGS)
-    expect(h.engineSendText).not.toHaveBeenCalled()
+    // Bot stands down for this thread…
     expect(h.state.updatePayload).toEqual({ ai_autoreply_disabled: true })
+    // …but the customer is no longer left in silence — the default
+    // handoff message goes out on the channel (whatsapp → engineSendText).
+    expect(h.engineSendText).toHaveBeenCalledWith(
+      expect.objectContaining({ conversationId: 'conv-1' }),
+    )
+    // …and a human is alerted.
+    expect(h.notifyHumanOfHandoff).toHaveBeenCalledWith(
+      expect.objectContaining({ conversationId: 'conv-1', channel: 'whatsapp' }),
+    )
+    // No reply-slot is claimed for a terminal handoff message.
     expect(h.state.rpcCalls).toHaveLength(0)
+  })
+
+  it('uses the account\'s custom handoff message when set', async () => {
+    h.generateReply.mockResolvedValue({ text: '', handoff: true })
+    h.loadAiConfig.mockResolvedValue(
+      aiConfig({ handoffMessage: 'Escribe a Max: +51 989 377 295' }),
+    )
+    await dispatchInboundToAiReply(ARGS)
+    expect(h.engineSendText).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'Escribe a Max: +51 989 377 295' }),
+    )
   })
 })

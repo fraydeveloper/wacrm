@@ -1,5 +1,6 @@
 import { engineSendText } from '@/lib/flows/meta-send'
 import { sendMessengerText } from '@/lib/messenger/send'
+import { sendTelegramText } from '@/lib/telegram/send'
 
 export type Channel = 'whatsapp' | 'messenger' | 'instagram' | 'telegram'
 
@@ -43,8 +44,15 @@ export async function sendChannelText(
         contactId: args.contactId,
         text: args.text,
       })
-    case 'instagram':
     case 'telegram':
+      return sendTelegramText({
+        accountId: args.accountId,
+        userId: args.userId,
+        conversationId: args.conversationId,
+        contactId: args.contactId,
+        text: args.text,
+      })
+    case 'instagram':
       throw new Error(`sendChannelText: channel "${args.channel}" is not implemented yet`)
   }
 }

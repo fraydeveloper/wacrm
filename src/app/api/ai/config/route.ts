@@ -30,7 +30,7 @@ export async function GET() {
       // `api_key` is selected only to derive `has_key` — it is stripped
       // out below and never returned to the client.
       .select(
-        'provider, model, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, ai_channels_enabled, api_key, embeddings_api_key',
+        'provider, model, system_prompt, is_active, auto_reply_enabled, auto_reply_max_per_conversation, ai_channels_enabled, handoff_message, handoff_notify_number, api_key, embeddings_api_key',
       )
       .eq('account_id', accountId)
       .maybeSingle()
@@ -104,6 +104,22 @@ export async function POST(request: Request) {
         )
       : AI_CHANNELS
 
+    // Human-handoff settings. `handoff_message` is what the bot sends the
+    // customer when it hands off (empty → null → built-in default at send
+    // time). `handoff_notify_number` is an optional WhatsApp number to
+    // ping a human; we store it lightly-normalized (strip spaces/dashes).
+    const handoffMessage =
+      typeof body.handoff_message === 'string' && body.handoff_message.trim()
+        ? body.handoff_message.trim()
+        : null
+    const rawNotify =
+      typeof body.handoff_notify_number === 'string'
+        ? body.handoff_notify_number.trim()
+        : ''
+    const handoffNotifyNumber = rawNotify
+      ? rawNotify.replace(/[\s()-]/g, '')
+      : null
+
     const rawKey = typeof body.api_key === 'string' ? body.api_key.trim() : ''
 
     // Embeddings key (optional, for semantic KB search): a non-empty
@@ -156,6 +172,8 @@ export async function POST(request: Request) {
           autoReplyEnabled,
           autoReplyMaxPerConversation: maxPer,
           channelsEnabled: [],
+          handoffMessage: null,
+          handoffNotifyNumber: null,
           embeddingsApiKey: null,
         })
       } catch (err) {
@@ -196,6 +214,8 @@ export async function POST(request: Request) {
       auto_reply_enabled: autoReplyEnabled,
       auto_reply_max_per_conversation: maxPer,
       ai_channels_enabled: channelsEnabled,
+      handoff_message: handoffMessage,
+      handoff_notify_number: handoffNotifyNumber,
     }
     if (rawEmbeddingsKey) {
       shared.embeddings_api_key = encrypt(rawEmbeddingsKey)

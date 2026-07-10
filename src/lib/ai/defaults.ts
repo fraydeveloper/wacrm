@@ -25,6 +25,16 @@ export const AI_PROVIDER_DEFAULT_MODEL: Record<AiProvider, string> = {
  */
 export const HANDOFF_SENTINEL = '[[HANDOFF]]'
 
+/**
+ * Message sent to the CUSTOMER when the bot hands off to a human, used
+ * when the account hasn't set its own `handoff_message`. Points them at a
+ * real person + WhatsApp number so the conversation doesn't just go quiet.
+ * Editable per-account in Settings → AI.
+ */
+export const DEFAULT_HANDOFF_MESSAGE =
+  'Para ayudarte mejor con esto, en un momento te contactará uno de nuestros asesores. ' +
+  'Si es urgente, también puedes escribir a Max Patricio por WhatsApp: +51 989 377 295. 🙌'
+
 /** Cap on generated reply length — keeps WhatsApp replies short and
  *  bounds token spend on the caller's own key. */
 export const MAX_OUTPUT_TOKENS = 1024
