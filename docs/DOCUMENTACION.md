@@ -14,7 +14,7 @@
 6. [Módulo de IA — Detalle completo](#6-módulo-de-ia--detalle-completo)
 7. [API Pública REST v1](#7-api-pública-rest-v1)
 8. [Seguridad](#8-seguridad)
-9. [Despliegue](#9-despliegue)
+9. [Despliegue](#9-despliegue) — guía paso a paso en [guia-local-y-produccion.md](guia-local-y-produccion.md)
 10. [Variables de entorno](#10-variables-de-entorno)
 11. [Preguntas frecuentes FAQ](#11-preguntas-frecuentes-faq)
 
@@ -117,8 +117,13 @@ Directorio centralizado de contactos de WhatsApp.
 - Búsqueda y filtros por nombre, teléfono, tags, campos personalizados
 - Tags — etiquetas personalizables para segmentar
 - Campos personalizados — definidos por el equipo (texto, número, fecha, etc.)
-- Importación CSV con mapeo de columnas
-- Deduplicación de números
+- Importación CSV con **plantilla descargable** ("Descargar plantilla CSV")
+  - Columna obligatoria `phone` (también acepta `telefono`, `celular`, `whatsapp`)
+  - Opcionales: `name`/`nombre` (+ `apellidos`), `email`/`correo`, `company`/`empresa`, `tags`/`etiquetas`
+  - Acepta archivos de Excel en español separados por `;` y con acentos (CSV UTF-8)
+  - Selector "País para números sin código" (Perú +51 por defecto): `987654321` → `+51987654321`
+  - Muestra las filas con teléfono no válido y su número de línea (p. ej. números convertidos por Excel a `5.19E+10`)
+- Deduplicación de números (también contra contactos existentes, sin límite de 1,000)
 - Vista de perfil — historial, negocios vinculados, notas
 
 ### 4.4 Pipelines de ventas (Kanban)
@@ -138,7 +143,9 @@ Envío masivo de mensajes usando plantillas aprobadas por Meta.
 
 **Características:**
 - Selección de plantilla aprobada por Meta
-- Filtrado de audiencia por tags y campos personalizados
+- Audiencia: todos los contactos, por etiquetas, por campo personalizado o **subiendo un CSV** (con plantilla descargable)
+- Exclusión de contactos por etiqueta
+- Soporta miles de destinatarios (paginado) y reintenta automáticamente si se alcanza el límite de solicitudes
 - Variables por destinatario — `{{nombre}}`, `{{empresa}}`, etc.
 - Programación — envío inmediato o programado
 - Tracking de entrega — enviado, entregado, leído, fallido
@@ -187,7 +194,10 @@ Motor de automatización sin código basado en reglas.
 
 Constructor de conversaciones ramificadas con botones interactivos de WhatsApp.
 
-> **Beta** — Funcionalidad en soft-GA. Completamente funcional.
+> Funcionalidad en producción (sin etiqueta Beta). Los flujos se ejecutan solo
+> en **WhatsApp**; los mensajes de Messenger y Telegram los atiende la IA o las
+> automatizaciones. Un flujo abandonado se cierra solo cuando el contacto vuelve
+> a escribir pasado el tiempo límite (24 h por defecto), aunque no haya cron.
 
 **Casos de uso:**
 - Menú principal de bienvenida
@@ -257,7 +267,16 @@ Acceso: **Configuración** en el menú lateral.
 
 ### 5.3 Apariencia
 
-- Tema claro / oscuro / sistema — sincronizado con el SO
+- Modo claro / oscuro
+- 11 colores de acento: Color de la empresa, Verde TED, Dorado, Violeta, Esmeralda, Cobalto, Celeste, Índigo, Ámbar, Rosa y Grafito
+- Se guarda por dispositivo. Si el dispositivo no eligió un color y la empresa definió su color de marca, se usa el color de la empresa.
+
+### 5.3.1 Empresa y marca (administradores)
+
+- **Nombre del negocio** — se muestra en la barra lateral (por defecto "Agente TED")
+- **Logo** — PNG, JPG o WEBP hasta 2 MB
+- **Color principal y secundario** — formato `#RRGGBB`, con sugerencias (Verde TED `#00745f`, Dorado TED `#f2b417`, etc.) y vista previa
+- Requiere la migración `037_account_branding.sql`
 
 ### 5.4 WhatsApp
 
@@ -301,7 +320,7 @@ Configuración para Facebook Messenger (canal adicional).
 
 ### 5.8 Negocios y moneda
 
-- Moneda por defecto para el dashboard y Kanban
+- Moneda por defecto para el dashboard y Kanban (incluye **PEN — Sol peruano**)
 - Configuración de etapas del pipeline de ventas
 
 ### 5.9 Miembros del equipo

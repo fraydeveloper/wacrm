@@ -72,13 +72,13 @@ export async function GET() {
       error: authError,
     } = await supabase.auth.getUser()
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     const accountId = await resolveAccountId(supabase, user.id)
     if (!accountId) {
       return NextResponse.json(
-        { connected: false, reason: 'no_account', message: 'Your profile is not linked to an account.' },
+        { connected: false, reason: 'no_account', message: 'Tu perfil no está vinculado a una cuenta.' },
         { status: 200 },
       )
     }
@@ -92,7 +92,7 @@ export async function GET() {
     if (configError) {
       console.error('Error fetching telegram_config:', configError)
       return NextResponse.json(
-        { connected: false, reason: 'db_error', message: 'Failed to fetch configuration' },
+        { connected: false, reason: 'db_error', message: 'No se pudo obtener la configuración' },
         { status: 200 },
       )
     }
@@ -102,7 +102,7 @@ export async function GET() {
         {
           connected: false,
           reason: 'no_config',
-          message: 'No Telegram configuration saved yet. Paste your bot token and click Save.',
+          message: 'Aún no hay configuración de Telegram guardada. Pega el token de tu bot y haz clic en Guardar.',
         },
         { status: 200 },
       )
@@ -142,7 +142,7 @@ export async function GET() {
   } catch (error) {
     console.error('Error in Telegram config GET:', error)
     return NextResponse.json(
-      { connected: false, reason: 'unknown', message: 'Internal server error' },
+      { connected: false, reason: 'unknown', message: 'Error interno del servidor' },
       { status: 500 },
     )
   }
@@ -163,12 +163,12 @@ export async function POST(request: Request) {
       error: authError,
     } = await supabase.auth.getUser()
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     const accountId = await resolveAccountId(supabase, user.id)
     if (!accountId) {
-      return NextResponse.json({ error: 'Your profile is not linked to an account.' }, { status: 403 })
+      return NextResponse.json({ error: 'Tu perfil no está vinculado a una cuenta.' }, { status: 403 })
     }
 
     const body = await request.json().catch(() => null)
@@ -198,11 +198,11 @@ export async function POST(request: Request) {
       .maybeSingle()
     if (claimedError) {
       console.error('Error checking bot_id ownership:', claimedError)
-      return NextResponse.json({ error: 'Failed to validate configuration' }, { status: 500 })
+      return NextResponse.json({ error: 'No se pudo validar la configuración' }, { status: 500 })
     }
     if (claimed) {
       return NextResponse.json(
-        { error: 'This Telegram bot is already connected to another account on this instance.' },
+        { error: 'Este bot de Telegram ya está conectado a otra cuenta en esta instalación.' },
         { status: 409 },
       )
     }
@@ -270,7 +270,7 @@ export async function POST(request: Request) {
         .eq('account_id', accountId)
       if (updateError) {
         console.error('Error updating telegram_config:', updateError)
-        return NextResponse.json({ error: 'Failed to update configuration' }, { status: 500 })
+        return NextResponse.json({ error: 'No se pudo actualizar la configuración' }, { status: 500 })
       }
     } else {
       const { error: insertError } = await supabase
@@ -278,7 +278,7 @@ export async function POST(request: Request) {
         .insert({ account_id: accountId, user_id: user.id, ...baseRow })
       if (insertError) {
         console.error('Error inserting telegram_config:', insertError)
-        return NextResponse.json({ error: 'Failed to save configuration' }, { status: 500 })
+        return NextResponse.json({ error: 'No se pudo guardar la configuración' }, { status: 500 })
       }
     }
 
@@ -289,7 +289,7 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     console.error('Error in Telegram config POST:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }
 
@@ -306,12 +306,12 @@ export async function DELETE() {
       error: authError,
     } = await supabase.auth.getUser()
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     const accountId = await resolveAccountId(supabase, user.id)
     if (!accountId) {
-      return NextResponse.json({ error: 'Your profile is not linked to an account.' }, { status: 403 })
+      return NextResponse.json({ error: 'Tu perfil no está vinculado a una cuenta.' }, { status: 403 })
     }
 
     // Best-effort: tell Telegram to stop delivering before we drop the row.
@@ -334,12 +334,12 @@ export async function DELETE() {
       .eq('account_id', accountId)
     if (deleteError) {
       console.error('Error deleting telegram_config:', deleteError)
-      return NextResponse.json({ error: 'Failed to delete configuration' }, { status: 500 })
+      return NextResponse.json({ error: 'No se pudo eliminar la configuración' }, { status: 500 })
     }
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error in Telegram config DELETE:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 })
   }
 }

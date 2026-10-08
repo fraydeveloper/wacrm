@@ -67,7 +67,7 @@ export async function PATCH(request: Request) {
     const name = rawName.trim();
     if (name.length === 0) {
       return NextResponse.json(
-        { error: "Account name cannot be empty" },
+        { error: "El nombre de la cuenta no puede estar vacío" },
         { status: 400 },
       );
     }
@@ -91,7 +91,7 @@ export async function PATCH(request: Request) {
     if (error) {
       console.error("[PATCH /api/account] update error:", error);
       return NextResponse.json(
-        { error: "Failed to update account" },
+        { error: "No se pudo actualizar la cuenta" },
         { status: 500 },
       );
     }

@@ -56,7 +56,7 @@ export async function POST(request: Request) {
 
     if (!content) {
       return NextResponse.json(
-        { error: 'No extractable text found in this file.' },
+        { error: 'No se encontró texto extraíble en este archivo.' },
         { status: 400 },
       )
     }
@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       .single()
     if (error || !doc) {
       console.error('[ai/knowledge/upload] insert error:', error)
-      return NextResponse.json({ error: 'Failed to save document' }, { status: 500 })
+      return NextResponse.json({ error: 'No se pudo guardar el documento' }, { status: 500 })
     }
 
     const { key: embeddingsApiKey, corrupt } = await loadEmbeddingsKey(supabase, accountId)

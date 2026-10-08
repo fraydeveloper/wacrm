@@ -28,7 +28,7 @@ export async function POST(
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
   const body = (await request.json().catch(() => null)) as
@@ -49,7 +49,7 @@ export async function POST(
     .eq('id', id)
     .maybeSingle()
   if (!existing) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
   }
 
   const admin = supabaseAdmin()
@@ -68,7 +68,7 @@ export async function POST(
         .eq('flow_id', id),
     ])
     if (!flow) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+      return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
     }
     const issues = validateFlowForActivation(
       flow as {
@@ -87,7 +87,7 @@ export async function POST(
     if (blockers.length > 0) {
       return NextResponse.json(
         {
-          error: 'Cannot activate flow — fix the issues below first.',
+          error: 'No se puede activar el flujo — corrige primero los problemas de abajo.',
           issues,
         },
         { status: 422 },

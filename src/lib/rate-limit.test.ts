@@ -78,7 +78,7 @@ describe("rateLimitResponse", () => {
     expect(res.headers.get("X-RateLimit-Remaining")).toBe("0");
     expect(Number(res.headers.get("Retry-After"))).toBeGreaterThan(0);
     const body = (await res.json()) as { error: string };
-    expect(body.error).toMatch(/rate limit/i);
+    expect(body.error).toMatch(/demasiadas solicitudes/i);
   });
 
   it("clamps Retry-After to a minimum of 1 second", () => {
@@ -94,11 +94,13 @@ describe("rateLimitResponse", () => {
 });
 
 describe("RATE_LIMITS presets", () => {
-  it("send and broadcast budgets are independent", async () => {
+  it("broadcast budget sustains the batch cadence of the sending hook", async () => {
     __resetRateLimitForTests();
     // Importing here so the presets stay close to their assertions.
     const { RATE_LIMITS } = await import("./rate-limit");
-    expect(RATE_LIMITS.send.limit).toBeGreaterThan(RATE_LIMITS.broadcast.limit);
+    // The hook posts one batch per second (~60/min). A budget below
+    // that 429s long campaigns mid-send (the old 5/min did exactly that).
+    expect(RATE_LIMITS.broadcast.limit).toBeGreaterThanOrEqual(60);
     expect(RATE_LIMITS.send.windowMs).toBe(60_000);
     expect(RATE_LIMITS.broadcast.windowMs).toBe(60_000);
   });

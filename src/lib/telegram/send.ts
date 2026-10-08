@@ -44,7 +44,7 @@ export async function sendTelegramText(
     .eq('account_id', args.accountId)
     .single()
   if (configErr || !config) {
-    throw new Error('Telegram not configured for this account')
+    throw new Error('Telegram no está configurado en esta cuenta')
   }
 
   const botToken = decrypt(config.bot_token)

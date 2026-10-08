@@ -3,6 +3,7 @@
 import { Check, Moon, Palette, SunMoon, Sun } from "lucide-react";
 
 import { useTheme } from "@/hooks/use-theme";
+import { useAuth } from "@/hooks/use-auth";
 import { MODES, THEMES, type Mode, type ThemeId } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 import { SettingsPanelHead } from "./settings-panel-head";
@@ -21,6 +22,8 @@ import { SettingsPanelHead } from "./settings-panel-head";
  */
 export function AppearancePanel() {
   const { theme, setTheme, mode, setMode } = useTheme();
+  const { account } = useAuth();
+  const brandColor = account?.brand_color ?? null;
   return (
     <section className="max-w-3xl animate-in fade-in-50 duration-200">
       <SettingsPanelHead
@@ -62,8 +65,12 @@ export function AppearancePanel() {
               key={t.id}
               id={t.id}
               name={t.name}
-              tagline={t.tagline}
-              swatch={t.swatch}
+              tagline={
+                t.id === "brand" && !brandColor
+                  ? "Aún no configurado — un administrador puede definirlo en Configuración → Empresa y marca."
+                  : t.tagline
+              }
+              swatch={t.id === "brand" && brandColor ? brandColor : t.swatch}
               isActive={t.id === theme}
               onPick={() => setTheme(t.id)}
             />

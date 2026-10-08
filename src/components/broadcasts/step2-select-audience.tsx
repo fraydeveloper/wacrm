@@ -1,7 +1,15 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { toast } from 'sonner';
 import { createClient } from '@/lib/supabase/client';
+import { fetchAllPages } from '@/lib/supabase/paginate';
+import {
+  DEFAULT_IMPORT_COUNTRY_CODE,
+  downloadContactCsvTemplate,
+  IMPORT_COUNTRY_CODES,
+  parseContactCsv,
+} from '@/lib/contacts/parse-contact-csv';
 import { CustomField, Tag } from '@/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,6 +21,9 @@ import {
   ArrowRight,
   ArrowLeft,
   X,
+  Download,
+  FileText,
+  AlertTriangle,
 } from 'lucide-react';
 
 type AudienceType = 'all' | 'tags' | 'custom_field' | 'csv';
@@ -89,6 +100,41 @@ export function Step2SelectAudience({
   const [loadingFields, setLoadingFields] = useState(false);
   const [estimatedCount, setEstimatedCount] = useState<number | null>(null);
   const [loadingCount, setLoadingCount] = useState(false);
+  const csvInputRef = useRef<HTMLInputElement>(null);
+  const [csvText, setCsvText] = useState('');
+  const [csvFileName, setCsvFileName] = useState<string | null>(null);
+  const [csvCountryCode, setCsvCountryCode] = useState(
+    DEFAULT_IMPORT_COUNTRY_CODE,
+  );
+  const [csvInvalidCount, setCsvInvalidCount] = useState(0);
+
+  function applyCsv(text: string, cc: string) {
+    const { rows, invalidRows, missingPhoneColumn } = parseContactCsv(text, {
+      defaultCountryCode: cc,
+    });
+    setCsvInvalidCount(invalidRows.length);
+    if (rows.length === 0) {
+      toast.error(
+        missingPhoneColumn
+          ? 'No se encontró la columna de teléfono. Usa el encabezado "phone" (o "telefono"/"celular").'
+          : 'El archivo no tiene teléfonos válidos.',
+      );
+    }
+    onUpdate({
+      ...audience,
+      type: 'csv',
+      csvContacts: rows.map((r) => ({ phone: r.phone, name: r.name })),
+    });
+  }
+
+  async function handleCsvFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const text = await file.text();
+    setCsvText(text);
+    setCsvFileName(file.name);
+    applyCsv(text, csvCountryCode);
+  }
 
   // Tags are used both by the primary "Filter by Tags" audience type
   // AND by the exclude-list below — so always load once on mount.
@@ -140,26 +186,36 @@ export function Step2SelectAudience({
         audience.tagIds &&
         audience.tagIds.length > 0
       ) {
-        const { data } = await supabase
-          .from('contact_tags')
-          .select('contact_id')
-          .in('tag_id', audience.tagIds);
-        baseIds = new Set((data ?? []).map((r) => r.contact_id));
+        const tagIds = audience.tagIds;
+        const data = await fetchAllPages<{ contact_id: string }>((from, to) =>
+          supabase
+            .from('contact_tags')
+            .select('contact_id')
+            .in('tag_id', tagIds)
+            .order('contact_id', { ascending: true })
+            .range(from, to),
+        );
+        baseIds = new Set(data.map((r) => r.contact_id));
       } else if (
         audience.type === 'custom_field' &&
         audience.customField?.fieldId &&
         audience.customField.value
       ) {
         const { fieldId, operator, value } = audience.customField;
-        let q = supabase
-          .from('contact_custom_values')
-          .select('contact_id')
-          .eq('custom_field_id', fieldId);
-        if (operator === 'is') q = q.eq('value', value);
-        else if (operator === 'is_not') q = q.neq('value', value);
-        else q = q.ilike('value', `%${value}%`);
-        const { data } = await q;
-        baseIds = new Set((data ?? []).map((r) => r.contact_id));
+        const buildQuery = () => {
+          let q = supabase
+            .from('contact_custom_values')
+            .select('contact_id')
+            .eq('custom_field_id', fieldId);
+          if (operator === 'is') q = q.eq('value', value);
+          else if (operator === 'is_not') q = q.neq('value', value);
+          else q = q.ilike('value', `%${value}%`);
+          return q;
+        };
+        const data = await fetchAllPages<{ contact_id: string }>((from, to) =>
+          buildQuery().order('contact_id', { ascending: true }).range(from, to),
+        );
+        baseIds = new Set(data.map((r) => r.contact_id));
       } else if (
         audience.type === 'csv' &&
         audience.csvContacts &&
@@ -176,11 +232,17 @@ export function Step2SelectAudience({
       // Apply exclude tags
       let excludeSet: Set<string> | null = null;
       if (audience.excludeTagIds && audience.excludeTagIds.length > 0) {
-        const { data: excludeRows } = await supabase
-          .from('contact_tags')
-          .select('contact_id')
-          .in('tag_id', audience.excludeTagIds);
-        excludeSet = new Set((excludeRows ?? []).map((r) => r.contact_id));
+        const excludeTagIds = audience.excludeTagIds;
+        const excludeRows = await fetchAllPages<{ contact_id: string }>(
+          (from, to) =>
+            supabase
+              .from('contact_tags')
+              .select('contact_id')
+              .in('tag_id', excludeTagIds)
+              .order('contact_id', { ascending: true })
+              .range(from, to),
+        );
+        excludeSet = new Set(excludeRows.map((r) => r.contact_id));
       }
 
       if (baseIds) {
@@ -196,6 +258,8 @@ export function Step2SelectAudience({
         const total = count ?? 0;
         setEstimatedCount(excludeSet ? Math.max(0, total - excludeSet.size) : total);
       }
+    } catch {
+      setEstimatedCount(null);
     } finally {
       setLoadingCount(false);
     }
@@ -384,6 +448,94 @@ export function Step2SelectAudience({
                 placeholder="Valor"
                 className="h-9 rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary"
               />
+            </div>
+          )}
+        </div>
+      )}
+
+      {audience.type === 'csv' && (
+        <div className="space-y-3 rounded-xl border border-border bg-card/50 p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-foreground">Lista de números (CSV)</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Columna obligatoria <code className="rounded bg-muted px-1">phone</code>{' '}
+                (o <code className="rounded bg-muted px-1">telefono</code>); opcional{' '}
+                <code className="rounded bg-muted px-1">name</code>. Los números nuevos se
+                guardan como contactos.
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => downloadContactCsvTemplate()}
+              className="border-border text-muted-foreground hover:bg-muted"
+            >
+              <Download className="h-4 w-4" />
+              Descargar plantilla
+            </Button>
+          </div>
+
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="grid gap-1">
+              <label
+                htmlFor="bc-csv-cc"
+                className="text-[11px] font-medium text-muted-foreground"
+              >
+                País para números sin código
+              </label>
+              <select
+                id="bc-csv-cc"
+                value={csvCountryCode}
+                onChange={(e) => {
+                  setCsvCountryCode(e.target.value);
+                  if (csvText) applyCsv(csvText, e.target.value);
+                }}
+                className="h-9 rounded-lg border border-border bg-muted px-2.5 text-sm text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              >
+                {IMPORT_COUNTRY_CODES.map((c) => (
+                  <option key={c.code || 'none'} value={c.code}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button
+              type="button"
+              onClick={() => csvInputRef.current?.click()}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <Upload className="h-4 w-4" />
+              {csvFileName ? 'Cambiar archivo' : 'Elegir archivo CSV'}
+            </Button>
+            <input
+              ref={csvInputRef}
+              type="file"
+              accept=".csv,text/csv"
+              onChange={handleCsvFile}
+              className="hidden"
+            />
+          </div>
+
+          {csvFileName && (
+            <div className="flex flex-wrap items-center gap-3 text-xs">
+              <span className="inline-flex items-center gap-1.5 text-foreground">
+                <FileText className="h-3.5 w-3.5 text-primary" />
+                {csvFileName}
+              </span>
+              <span className="text-muted-foreground">
+                {(audience.csvContacts?.length ?? 0).toLocaleString()} número
+                {(audience.csvContacts?.length ?? 0) !== 1 ? 's' : ''} válido
+                {(audience.csvContacts?.length ?? 0) !== 1 ? 's' : ''}
+              </span>
+              {csvInvalidCount > 0 && (
+                <span className="inline-flex items-center gap-1 text-amber-400">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  {csvInvalidCount} fila{csvInvalidCount !== 1 ? 's' : ''} omitida
+                  {csvInvalidCount !== 1 ? 's' : ''} por teléfono no válido
+                </span>
+              )}
             </div>
           )}
         </div>

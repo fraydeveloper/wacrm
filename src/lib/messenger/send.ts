@@ -44,7 +44,7 @@ export async function sendMessengerText(
     .eq('account_id', args.accountId)
     .single()
   if (configErr || !config) {
-    throw new Error('Messenger not configured for this account')
+    throw new Error('Messenger no está configurado en esta cuenta')
   }
 
   const pageAccessToken = decrypt(config.page_access_token)

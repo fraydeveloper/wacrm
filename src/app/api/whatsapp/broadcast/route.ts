@@ -15,6 +15,11 @@ import {
   rateLimitResponse,
   RATE_LIMITS,
 } from '@/lib/rate-limit'
+import { canSendMessages, isAccountRole } from '@/lib/auth/roles'
+
+/** Upper bound per request — the client sends batches of 10. Keeps a
+ *  single call well inside the serverless timeout. */
+const BROADCAST_MAX_RECIPIENTS_PER_CALL = 50
 
 interface BroadcastResult {
   phone: string
@@ -68,7 +73,7 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
     // Per-user broadcast budget. Note: this limits how often a user
@@ -85,13 +90,24 @@ export async function POST(request: Request) {
     // by a teammate.
     const { data: profile } = await supabase
       .from('profiles')
-      .select('account_id')
+      .select('account_id, account_role')
       .eq('user_id', user.id)
       .maybeSingle()
     const accountId = profile?.account_id as string | undefined
     if (!accountId) {
       return NextResponse.json(
-        { error: 'Your profile is not linked to an account.' },
+        { error: 'Tu perfil no está vinculado a una cuenta.' },
+        { status: 403 },
+      )
+    }
+    // Viewers are read-only — the UI hides the broadcast wizard for
+    // them, but the endpoint must enforce it too.
+    if (
+      !isAccountRole(profile?.account_role) ||
+      !canSendMessages(profile.account_role)
+    ) {
+      return NextResponse.json(
+        { error: 'Tu rol no permite enviar difusiones.' },
         { status: 403 },
       )
     }
@@ -124,6 +140,15 @@ export async function POST(request: Request) {
             'Provide either `recipients` (preferred) or `phone_numbers` — must be a non-empty array',
         },
         { status: 400 }
+      )
+    }
+
+    if (recipients.length > BROADCAST_MAX_RECIPIENTS_PER_CALL) {
+      return NextResponse.json(
+        {
+          error: `Máximo ${BROADCAST_MAX_RECIPIENTS_PER_CALL} destinatarios por solicitud`,
+        },
+        { status: 400 },
       )
     }
 
@@ -186,7 +211,7 @@ export async function POST(request: Request) {
         results.push({
           phone: recipient.phone,
           status: 'failed',
-          error: 'Invalid phone number format',
+          error: 'Formato de número de teléfono no válido',
         })
         failedCount++
         continue
@@ -256,7 +281,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error in WhatsApp broadcast POST:', error)
     return NextResponse.json(
-      { error: 'Failed to process broadcast' },
+      { error: 'No se pudo procesar la difusión' },
       { status: 500 }
     )
   }

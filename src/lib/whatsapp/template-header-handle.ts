@@ -39,7 +39,7 @@ export async function ensureImageHeaderHandle(
   try {
     res = await fetch(payload.header_media_url)
   } catch {
-    throw new Error('Could not fetch the header image URL. Make sure it is publicly reachable.')
+    throw new Error('No se pudo obtener la imagen del encabezado. Verifica que la URL sea pública.')
   }
   if (!res.ok) {
     throw new Error(`Header image URL returned ${res.status}. It must be publicly reachable.`)
@@ -52,7 +52,7 @@ export async function ensureImageHeaderHandle(
 
   const bytes = new Uint8Array(await res.arrayBuffer())
   if (bytes.byteLength === 0) {
-    throw new Error('Header image is empty.')
+    throw new Error('La imagen del encabezado está vacía.')
   }
   if (bytes.byteLength > IMAGE_MAX_BYTES) {
     throw new Error(

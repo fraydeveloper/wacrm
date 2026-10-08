@@ -38,7 +38,7 @@ export async function GET() {
     if (error) {
       console.error('[ai/config GET] fetch error:', error)
       return NextResponse.json(
-        { error: 'Failed to load AI configuration' },
+        { error: 'No se pudo cargar la configuración de IA' },
         { status: 500 },
       )
     }
@@ -75,7 +75,7 @@ export async function POST(request: Request) {
     if (!limit.success) return rateLimitResponse(limit)
 
     const body = await request.json().catch(() => null)
-    if (!body || typeof body !== 'object') return bad('Invalid request body')
+    if (!body || typeof body !== 'object') return bad('Solicitud no válida')
 
     const provider = body.provider
     if (!isAiProvider(provider)) {
@@ -145,7 +145,7 @@ export async function POST(request: Request) {
       try {
         apiKeyPlain = decrypt(existing.api_key)
       } catch {
-        return bad('Stored API key could not be decrypted — re-enter your key.')
+        return bad('No se pudo descifrar la llave de API guardada — vuelve a ingresarla.')
       }
     } else {
       return bad('api_key is required')
@@ -231,7 +231,7 @@ export async function POST(request: Request) {
       if (upErr) {
         console.error('[ai/config POST] update error:', upErr)
         return NextResponse.json(
-          { error: 'Failed to save AI configuration' },
+          { error: 'No se pudo guardar la configuración de IA' },
           { status: 500 },
         )
       }
@@ -245,7 +245,7 @@ export async function POST(request: Request) {
       if (insErr) {
         console.error('[ai/config POST] insert error:', insErr)
         return NextResponse.json(
-          { error: 'Failed to save AI configuration' },
+          { error: 'No se pudo guardar la configuración de IA' },
           { status: 500 },
         )
       }
@@ -273,7 +273,7 @@ export async function DELETE() {
     if (error) {
       console.error('[ai/config DELETE] error:', error)
       return NextResponse.json(
-        { error: 'Failed to delete AI configuration' },
+        { error: 'No se pudo eliminar la configuración de IA' },
         { status: 500 },
       )
     }

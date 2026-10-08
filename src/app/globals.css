@@ -217,6 +217,93 @@ html[data-theme="rose"] {
   --sidebar-ring: oklch(0.645 0.22 16);
 }
 
+/* Brand theme — reads the account's brand colors (migration 037),
+ * written onto <html> as --brand-* by the boot script / BrandSync
+ * after hex validation. Falls back to violet when unset. */
+html[data-theme="brand"] {
+  --primary: var(--brand-primary, oklch(0.526 0.247 293));
+  --primary-foreground: var(--brand-primary-fg, oklch(0.985 0 0));
+  --primary-hover: color-mix(in oklch, var(--primary) 85%, white);
+  --primary-soft: color-mix(in oklch, var(--primary) 12%, transparent);
+  --primary-soft-2: color-mix(in oklch, var(--primary) 22%, transparent);
+  --ring: var(--primary);
+  --chart-1: var(--primary);
+  --chart-2: var(--brand-secondary, oklch(0.7 0.14 195));
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-ring: var(--primary);
+}
+
+html[data-theme="ted"] {
+  --primary: #00745f;
+  --primary-foreground: #ffffff;
+  --primary-hover: #008a71;
+  --primary-soft: rgb(0 116 95 / 0.14);
+  --primary-soft-2: rgb(0 116 95 / 0.24);
+  --ring: #00745f;
+  --chart-1: #00745f;
+  --chart-2: #f2b417;
+  --sidebar-primary: #00745f;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-ring: #00745f;
+}
+
+html[data-theme="gold"] {
+  --primary: #f2b417;
+  --primary-foreground: #1a1405;
+  --primary-hover: #f6c544;
+  --primary-soft: rgb(242 180 23 / 0.12);
+  --primary-soft-2: rgb(242 180 23 / 0.22);
+  --ring: #f2b417;
+  --chart-1: #f2b417;
+  --chart-2: #00745f;
+  --sidebar-primary: #f2b417;
+  --sidebar-primary-foreground: #1a1405;
+  --sidebar-ring: #f2b417;
+}
+
+html[data-theme="sky"] {
+  --primary: #0ea5e9;
+  --primary-foreground: #04131c;
+  --primary-hover: #38bdf8;
+  --primary-soft: rgb(14 165 233 / 0.12);
+  --primary-soft-2: rgb(14 165 233 / 0.22);
+  --ring: #0ea5e9;
+  --chart-1: #0ea5e9;
+  --chart-2: #6366f1;
+  --sidebar-primary: #0ea5e9;
+  --sidebar-primary-foreground: #04131c;
+  --sidebar-ring: #0ea5e9;
+}
+
+html[data-theme="indigo"] {
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --primary-hover: #6366f1;
+  --primary-soft: rgb(79 70 229 / 0.12);
+  --primary-soft-2: rgb(79 70 229 / 0.22);
+  --ring: #4f46e5;
+  --chart-1: #4f46e5;
+  --chart-2: #0ea5e9;
+  --sidebar-primary: #4f46e5;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-ring: #4f46e5;
+}
+
+html[data-theme="slate"] {
+  --primary: #475569;
+  --primary-foreground: #ffffff;
+  --primary-hover: #64748b;
+  --primary-soft: rgb(71 85 105 / 0.16);
+  --primary-soft-2: rgb(71 85 105 / 0.28);
+  --ring: #64748b;
+  --chart-1: #64748b;
+  --chart-2: #94a3b8;
+  --sidebar-primary: #475569;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-ring: #64748b;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

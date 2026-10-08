@@ -10,6 +10,7 @@ import { SettingsOverview } from '@/components/settings/settings-overview';
 import { ProfileForm } from '@/components/settings/profile-form';
 import { SecurityPanel } from '@/components/settings/security-panel';
 import { AppearancePanel } from '@/components/settings/appearance-panel';
+import { BrandSettings } from '@/components/settings/brand-settings';
 import { WhatsAppConfig } from '@/components/settings/whatsapp-config';
 import { MessengerConfig } from '@/components/settings/messenger-config';
 import { TelegramConfig } from '@/components/settings/telegram-config';
@@ -57,6 +58,7 @@ export default function SettingsPage() {
     profile: <ProfileForm />,
     security: <SecurityPanel />,
     appearance: <AppearancePanel />,
+    brand: <BrandSettings />,
     whatsapp: <WhatsAppConfig />,
     messenger: <MessengerConfig />,
     telegram: <TelegramConfig />,

@@ -362,25 +362,32 @@ export async function recordAndDispatchMessage(
   }
 
   const inboundText = input.contentText ?? ''
-  const flowResult = await dispatchInboundToFlows({
-    accountId,
-    userId: configOwnerUserId,
-    contactId: contactRecord.id,
-    conversationId: conversation.id,
-    message: input.interactiveReplyId
-      ? {
-          kind: 'interactive_reply',
-          reply_id: input.interactiveReplyId,
-          reply_title: inboundText,
-          meta_message_id: input.externalMessageId,
-        }
-      : {
-          kind: 'text',
-          text: inboundText,
-          meta_message_id: input.externalMessageId,
-        },
-    isFirstInboundMessage,
-  })
+  // Flows send through the WhatsApp Cloud API only (lib/flows/meta-send).
+  // Dispatching a Messenger/Telegram message into them would "consume"
+  // it and then fail to reply on the right channel — leaving the
+  // customer with no flow answer AND no AI auto-reply. Other channels
+  // skip flows and fall through to automations / AI as usual.
+  const flowResult = channel !== 'whatsapp'
+    ? { consumed: false as const }
+    : await dispatchInboundToFlows({
+        accountId,
+        userId: configOwnerUserId,
+        contactId: contactRecord.id,
+        conversationId: conversation.id,
+        message: input.interactiveReplyId
+          ? {
+              kind: 'interactive_reply',
+              reply_id: input.interactiveReplyId,
+              reply_title: inboundText,
+              meta_message_id: input.externalMessageId,
+            }
+          : {
+              kind: 'text',
+              text: inboundText,
+              meta_message_id: input.externalMessageId,
+            },
+        isFirstInboundMessage,
+      })
   const flowConsumed = flowResult.consumed
 
   const automationTriggers: (

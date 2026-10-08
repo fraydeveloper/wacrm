@@ -27,6 +27,7 @@ import {
   Zap,
 } from "lucide-react";
 import type { AccountRole } from "@/lib/auth/roles";
+import { DEFAULT_BRAND_NAME } from "@/lib/brand";
 
 // Per-role chip metadata used in the sidebar's account strip + the
 // Members tab roster. Keeping this near both consumers in a single
@@ -97,7 +98,7 @@ const navItems: NavItem[] = [
   { href: "/pipelines", label: "Embudos", icon: GitBranch },
   { href: "/broadcasts", label: "Difusiones", icon: Radio },
   { href: "/automations", label: "Automatizaciones", icon: Zap },
-  { href: "/flows", label: "Flujos", icon: Workflow, beta: true },
+  { href: "/flows", label: "Flujos", icon: Workflow },
   { href: "/agents", label: "Agentes IA", icon: Bot },
 ];
 
@@ -124,6 +125,10 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
   // name diverges and the strip becomes meaningful — that's the signal
   // we gate on. Wait for the profile fetch to settle first, otherwise
   // the strip flashes in once the row resolves (a layout jump).
+  const brandName = account?.brand_name?.trim() || DEFAULT_BRAND_NAME;
+  const brandLogo = account?.brand_logo_url?.startsWith("https://")
+    ? account.brand_logo_url
+    : null;
   const showAccountStrip =
     !profileLoading &&
     !!account?.name &&
@@ -184,12 +189,25 @@ export function Sidebar({ open = false, onClose }: SidebarProps) {
         {/* Logo row. On mobile we put a close button here; on desktop the
             close button is hidden since the sidebar is always-visible. */}
         <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-border px-4">
-          <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <MessageSquare className="h-4 w-4" />
-            </div>
-            <span className="text-sm font-semibold text-foreground">
-              CRM Template for WhatsApp
+          <Link
+            href="/dashboard"
+            className="flex min-w-0 items-center gap-2"
+            title={brandName}
+          >
+            {brandLogo ? (
+              // eslint-disable-next-line @next/next/no-img-element -- user-uploaded logo on Supabase Storage; next/image would need the host whitelisted per deployment.
+              <img
+                src={brandLogo}
+                alt={brandName}
+                className="h-8 w-8 shrink-0 rounded-lg bg-muted object-contain"
+              />
+            ) : (
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <MessageSquare className="h-4 w-4" />
+              </div>
+            )}
+            <span className="truncate text-sm font-semibold text-foreground">
+              {brandName}
             </span>
           </Link>
           <button

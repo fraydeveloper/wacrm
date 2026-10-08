@@ -408,7 +408,7 @@ export function FlowEditorProvider({
       const res = await fetch(`/api/flows/${initialFlow.id}`, {
         method: "DELETE",
       });
-      if (!res.ok) throw new Error(`Delete failed: ${res.status}`);
+      if (!res.ok) throw new Error(`No se pudo eliminar: ${res.status}`);
       router.push("/flows");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Error al eliminar";

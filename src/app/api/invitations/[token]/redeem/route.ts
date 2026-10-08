@@ -48,7 +48,7 @@ function rpcErrorToResponse(err: PostgrestError): NextResponse {
   }
   console.error("[redeem] unexpected RPC error:", err);
   return NextResponse.json(
-    { error: "Failed to redeem invitation" },
+    { error: "No se pudo canjear la invitación" },
     { status: 500 },
   );
 }
@@ -78,7 +78,7 @@ export async function POST(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
   const { data: accountId, error } = await supabase.rpc("redeem_invitation", {

@@ -57,7 +57,7 @@ export async function GET() {
     if (error) {
       console.error('[GET /api/account/api-keys] fetch error:', error);
       return NextResponse.json(
-        { error: 'Failed to load API keys' },
+        { error: 'No se pudieron cargar las llaves de API' },
         { status: 500 }
       );
     }
@@ -140,7 +140,7 @@ export async function POST(request: Request) {
     if (error || !data) {
       console.error('[POST /api/account/api-keys] insert error:', error);
       return NextResponse.json(
-        { error: 'Failed to create API key' },
+        { error: 'No se pudo crear la llave de API' },
         { status: 500 }
       );
     }

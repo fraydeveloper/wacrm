@@ -36,7 +36,7 @@ async function callTelegram<T>(
     throw new Error(`Telegram API error: ${res.status}`)
   }
   if (!data.ok || data.result === undefined) {
-    // Telegram's `description` is human-readable ("Unauthorized",
+    // Telegram's `description` is human-readable ("No autorizado",
     // "chat not found", ...) — surface it so the settings UI / logs can
     // show exactly why a call failed.
     throw new Error(data.description || `Telegram API error: ${res.status}`)

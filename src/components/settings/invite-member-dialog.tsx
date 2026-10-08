@@ -14,6 +14,7 @@
 // shouts this in copy.
 // ============================================================
 
+import { DEFAULT_BRAND_NAME } from '@/lib/brand';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Copy, Loader2, MessageCircle, Sparkles } from 'lucide-react';
@@ -146,7 +147,7 @@ export function InviteMemberDialog({
         // string if `account` hasn't loaded yet (shouldn't happen
         // — the dialog requires admin+ which requires a loaded
         // profile — but stay safe).
-        accountName: account?.name ?? 'nuestra cuenta de wacrm',
+        accountName: account?.name ?? 'nuestra cuenta',
       });
       onCreated();
     } catch (err) {
@@ -175,8 +176,8 @@ export function InviteMemberDialog({
     // they're being invited to before clicking through. This matters
     // for users in multi-team contexts where "our wacrm account"
     // wouldn't be enough to disambiguate.
-    const accountName = result?.accountName ?? 'nuestra cuenta de wacrm';
-    const message = `Únete a ${accountName} en wacrm usando este enlace (válido por ${result?.expiresInDays} días): ${url}`;
+    const accountName = result?.accountName ?? 'nuestra cuenta';
+    const message = `Únete a ${accountName} en ${account?.brand_name?.trim() || DEFAULT_BRAND_NAME} usando este enlace (válido por ${result?.expiresInDays} días): ${url}`;
     return `https://wa.me/?text=${encodeURIComponent(message)}`;
   }
 

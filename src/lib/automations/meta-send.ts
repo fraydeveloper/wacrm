@@ -89,7 +89,7 @@ async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: str
     .eq('account_id', input.accountId)
     .single()
   if (configErr || !config) {
-    throw new Error('WhatsApp not configured for this account')
+    throw new Error('WhatsApp no está configurado en esta cuenta')
   }
 
   const accessToken = decrypt(config.access_token)

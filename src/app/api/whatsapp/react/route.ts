@@ -28,7 +28,7 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
     const limit = checkRateLimit(`react:${user.id}`, RATE_LIMITS.react);
@@ -46,7 +46,7 @@ export async function POST(request: Request) {
     const accountId = profile?.account_id as string | undefined;
     if (!accountId) {
       return NextResponse.json(
-        { error: 'Your profile is not linked to an account.' },
+        { error: 'Tu perfil no está vinculado a una cuenta.' },
         { status: 403 },
       );
     }
@@ -72,14 +72,14 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (msgError || !targetMessage) {
-      return NextResponse.json({ error: 'Message not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Mensaje no encontrado' }, { status: 404 });
     }
 
     if (!targetMessage.message_id) {
       // No Meta ID yet — usually a sending/failed agent message. We can't
       // tell Meta to react to a message it never received.
       return NextResponse.json(
-        { error: 'Cannot react to a message that has not been sent to WhatsApp' },
+        { error: 'No se puede reaccionar a un mensaje que no se envió por WhatsApp' },
         { status: 400 },
       );
     }
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
 
     if (convError || !conversation) {
       return NextResponse.json(
-        { error: 'Conversation not found' },
+        { error: 'Conversación no encontrada' },
         { status: 404 },
       );
     }
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
       : conversation.contact;
     if (!contact?.phone) {
       return NextResponse.json(
-        { error: 'Contact phone number not found' },
+        { error: 'No se encontró el teléfono del contacto' },
         { status: 400 },
       );
     }
@@ -117,7 +117,7 @@ export async function POST(request: Request) {
 
     if (configError || !config) {
       return NextResponse.json(
-        { error: 'WhatsApp not configured.' },
+        { error: 'WhatsApp no está configurado.' },
         { status: 400 },
       );
     }
@@ -186,7 +186,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error in WhatsApp react POST:', error);
     return NextResponse.json(
-      { error: 'Failed to react to message' },
+      { error: 'No se pudo reaccionar al mensaje' },
       { status: 500 },
     );
   }

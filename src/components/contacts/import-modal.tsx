@@ -9,9 +9,14 @@ import {
   normalizeKey,
 } from '@/lib/contacts/dedupe';
 import {
+  DEFAULT_IMPORT_COUNTRY_CODE,
+  downloadContactCsvTemplate,
+  IMPORT_COUNTRY_CODES,
   parseContactCsv,
+  type InvalidContactRow,
   type ParsedContactRow,
 } from '@/lib/contacts/parse-contact-csv';
+import { fetchAllPages } from '@/lib/supabase/paginate';
 import {
   assignImportedContactTags,
   resolveImportTagIds,
@@ -35,6 +40,7 @@ import {
   CheckCircle,
   XCircle,
   AlertTriangle,
+  Download,
   Tag,
 } from 'lucide-react';
 
@@ -128,7 +134,10 @@ export function ImportModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
+  const [fileText, setFileText] = useState<string>('');
+  const [countryCode, setCountryCode] = useState(DEFAULT_IMPORT_COUNTRY_CODE);
   const [parsedRows, setParsedRows] = useState<ParsedContactRow[]>([]);
+  const [invalidRows, setInvalidRows] = useState<InvalidContactRow[]>([]);
   const [hasTagsColumn, setHasTagsColumn] = useState(false);
   const [hasCompanyColumn, setHasCompanyColumn] = useState(false);
   const [tagColorByKey, setTagColorByKey] = useState<Map<string, string>>(
@@ -139,12 +148,15 @@ export function ImportModal({
     imported: number;
     skipped: number;
     failed: number;
+    invalid: number;
     tagsAssigned: number;
   } | null>(null);
 
   function reset() {
     setFile(null);
+    setFileText('');
     setParsedRows([]);
+    setInvalidRows([]);
     setHasTagsColumn(false);
     setHasCompanyColumn(false);
     setTagColorByKey(new Map());
@@ -165,15 +177,31 @@ export function ImportModal({
     setResult(null);
 
     const text = await selected.text();
+    setFileText(text);
+    await applyParse(text, countryCode);
+  }
+
+  async function handleCountryChange(next: string) {
+    setCountryCode(next);
+    if (fileText) await applyParse(fileText, next);
+  }
+
+  async function applyParse(text: string, cc: string) {
     const {
       rows,
+      invalidRows: badRows,
+      missingPhoneColumn,
       hasTagsColumn: csvHasTags,
       hasCompanyColumn: csvHasCompany,
-    } = parseContactCsv(text);
+    } = parseContactCsv(text, { defaultCountryCode: cc });
+
+    setInvalidRows(badRows);
 
     if (rows.length === 0) {
       toast.error(
-        'No se encontraron filas válidas. Asegúrate de que el CSV tenga una columna llamada "phone".'
+        missingPhoneColumn
+          ? 'No se encontró la columna de teléfono. Usa el encabezado "phone" (o "telefono"/"celular"). Descarga la plantilla de ejemplo.'
+          : 'No se encontraron filas con teléfonos válidos. Revisa los errores listados abajo.'
       );
       setParsedRows([]);
       setHasTagsColumn(false);
@@ -219,6 +247,7 @@ export function ImportModal({
       let imported = 0;
       let skipped = 0;
       let failed = 0;
+      const invalid = invalidRows.length;
 
       // 1) De-dupe within the file by normalized phone (keep first).
       const { unique, duplicates: inFileDupes } = dedupeByPhone(parsedRows);
@@ -226,15 +255,21 @@ export function ImportModal({
 
       // 2) Skip numbers already in this account. One read of the
       //    generated `phone_normalized` column (migration 022) → Set.
-      const { data: existingRows } = await supabase
-        .from('contacts')
-        .select('phone_normalized')
-        .eq('account_id', accountId);
+      //    Paginated — a single select stops at 1 000 rows, so larger
+      //    accounts used to re-insert (and fail on) existing numbers.
+      const existingRows = await fetchAllPages<{
+        phone_normalized: string | null;
+      }>((from, to) =>
+        supabase
+          .from('contacts')
+          .select('phone_normalized')
+          .eq('account_id', accountId)
+          .order('id', { ascending: true })
+          .range(from, to)
+      );
       const existing = new Set(
-        (existingRows ?? [])
-          .map(
-            (r) => (r as { phone_normalized: string | null }).phone_normalized
-          )
+        existingRows
+          .map((r) => r.phone_normalized)
           .filter((p): p is string => !!p)
       );
 
@@ -339,7 +374,7 @@ export function ImportModal({
         toast.warning('Contactos importados, pero algunas asignaciones de etiquetas fallaron.');
       }
 
-      setResult({ imported, skipped, failed, tagsAssigned });
+      setResult({ imported, skipped, failed, invalid, tagsAssigned });
       if (imported > 0) {
         toast.success(
           `${imported} contacto${imported !== 1 ? 's' : ''} importado${imported !== 1 ? 's' : ''}`
@@ -426,8 +461,44 @@ export function ImportModal({
                 tags
               </code>{' '}
               (separadas por comas; usa comillas si una celda tiene varias etiquetas).
+              También acepta encabezados en español (telefono, nombre, correo,
+              empresa, etiquetas) y archivos de Excel separados por punto y coma.
             </DialogDescription>
           </DialogHeader>
+
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="grid gap-1">
+              <label
+                htmlFor="import-country-code"
+                className="text-[11px] font-medium text-muted-foreground"
+              >
+                País para números sin código
+              </label>
+              <select
+                id="import-country-code"
+                value={countryCode}
+                onChange={(e) => handleCountryChange(e.target.value)}
+                disabled={importing}
+                className="h-8 rounded-lg border border-border bg-muted px-2 text-xs text-foreground outline-none focus:border-primary focus:ring-1 focus:ring-primary"
+              >
+                {IMPORT_COUNTRY_CODES.map((c) => (
+                  <option key={c.code || 'none'} value={c.code}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => downloadContactCsvTemplate()}
+              className="border-border text-muted-foreground hover:bg-muted"
+            >
+              <Download className="size-4" />
+              Descargar plantilla CSV
+            </Button>
+          </div>
 
           <div
             role="button"
@@ -458,6 +529,8 @@ export function ImportModal({
                 <span className="rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-medium text-muted-foreground">
                   {parsedRows.length} fila{parsedRows.length !== 1 ? 's' : ''}{' '}
                   lista{parsedRows.length !== 1 ? 's' : ''}
+                  {invalidRows.length > 0 &&
+                    ` · ${invalidRows.length} con error`}
                 </span>
               </>
             ) : (
@@ -469,7 +542,7 @@ export function ImportModal({
                   Haz clic para elegir un archivo CSV
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  .csv hasta el límite de tu navegador
+                  Archivo .csv (en Excel: Guardar como → CSV UTF-8)
                 </p>
               </>
             )}
@@ -586,6 +659,28 @@ export function ImportModal({
             </div>
           )}
 
+          {invalidRows.length > 0 && !result && (
+            <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3">
+              <p className="flex items-center gap-1.5 text-xs font-medium text-amber-400">
+                <AlertTriangle className="size-3.5 shrink-0" />
+                {invalidRows.length} fila{invalidRows.length !== 1 ? 's' : ''} no
+                se importará{invalidRows.length !== 1 ? 'n' : ''} (teléfono no válido)
+              </p>
+              <ul className="mt-2 max-h-32 space-y-0.5 overflow-y-auto text-[11px] text-muted-foreground">
+                {invalidRows.slice(0, 50).map((r) => (
+                  <li key={r.line}>
+                    Línea {r.line}:{' '}
+                    <span className="font-mono">{r.value || '—'}</span> —{' '}
+                    {r.reason}
+                  </li>
+                ))}
+                {invalidRows.length > 50 && (
+                  <li>… y {invalidRows.length - 50} más</li>
+                )}
+              </ul>
+            </div>
+          )}
+
           {result && (
             <div className="rounded-xl border border-border bg-background/50 p-4">
               <p className="text-sm font-medium text-popover-foreground">Importación completa</p>
@@ -607,6 +702,12 @@ export function ImportModal({
                   <div className="flex items-center gap-1.5 text-sm text-amber-400">
                     <AlertTriangle className="size-4 shrink-0" />
                     {result.skipped} omitido{result.skipped !== 1 ? 's' : ''}
+                  </div>
+                )}
+                {result.invalid > 0 && (
+                  <div className="flex items-center gap-1.5 text-sm text-amber-400">
+                    <AlertTriangle className="size-4 shrink-0" />
+                    {result.invalid} con teléfono no válido
                   </div>
                 )}
                 {result.failed > 0 && (

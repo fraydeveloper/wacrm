@@ -39,7 +39,12 @@ import {
 
 interface ThemeContextValue {
   theme: ThemeId;
-  setTheme: (next: ThemeId) => void;
+  /** Apply an accent. `persist: false` applies it for this session
+   *  without recording it as the device's explicit choice (used to
+   *  default to the account brand theme). */
+  setTheme: (next: ThemeId, opts?: { persist?: boolean }) => void;
+  /** True when this device has an explicitly chosen accent saved. */
+  hasSavedTheme: () => boolean;
   mode: Mode;
   setMode: (next: Mode) => void;
   toggleMode: () => void;
@@ -80,16 +85,28 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemeId>(readInitialTheme);
   const [mode, setModeState] = useState<Mode>(readInitialMode);
 
-  const setTheme = useCallback((next: ThemeId) => {
+  const setTheme = useCallback(
+    (next: ThemeId, opts?: { persist?: boolean }) => {
     setThemeState(next);
     if (typeof document !== "undefined") {
       document.documentElement.dataset.theme = next;
     }
+    if (opts?.persist === false) return;
     try {
       localStorage.setItem(STORAGE_KEY, next);
     } catch {
       // Same private-browsing edge case as above; the in-memory state
       // still updates so the current tab works for the session.
+    }
+  },
+  [],
+  );
+
+  const hasSavedTheme = useCallback(() => {
+    try {
+      return isThemeId(localStorage.getItem(STORAGE_KEY));
+    } catch {
+      return false;
     }
   }, []);
 
@@ -132,7 +149,9 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme, mode]);
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, mode, setMode, toggleMode }}>
+    <ThemeContext.Provider
+      value={{ theme, setTheme, hasSavedTheme, mode, setMode, toggleMode }}
+    >
       {children}
     </ThemeContext.Provider>
   );
@@ -147,6 +166,7 @@ export function useTheme(): ThemeContextValue {
     return {
       theme: DEFAULT_THEME,
       setTheme: () => {},
+      hasSavedTheme: () => false,
       mode: DEFAULT_MODE,
       setMode: () => {},
       toggleMode: () => {},

@@ -20,7 +20,7 @@ export async function GET() {
       .maybeSingle()
     if (error) {
       console.error('[google-sheets/config GET] error:', error)
-      return NextResponse.json({ connected: false, error: 'Failed to load configuration' }, { status: 200 })
+      return NextResponse.json({ connected: false, error: 'No se pudo cargar la configuración' }, { status: 200 })
     }
     if (!data) return NextResponse.json({ connected: false })
     return NextResponse.json({ connected: true, service_account_email: data.service_account_email })
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
         .eq('account_id', accountId)
       if (error) {
         console.error('[google-sheets/config POST] update error:', error)
-        return NextResponse.json({ error: 'Failed to save configuration' }, { status: 500 })
+        return NextResponse.json({ error: 'No se pudo guardar la configuración' }, { status: 500 })
       }
     } else {
       const { error } = await supabase
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
         .insert({ account_id: accountId, created_by: userId, ...row })
       if (error) {
         console.error('[google-sheets/config POST] insert error:', error)
-        return NextResponse.json({ error: 'Failed to save configuration' }, { status: 500 })
+        return NextResponse.json({ error: 'No se pudo guardar la configuración' }, { status: 500 })
       }
     }
 
@@ -107,7 +107,7 @@ export async function DELETE() {
       .eq('account_id', accountId)
     if (error) {
       console.error('[google-sheets/config DELETE] error:', error)
-      return NextResponse.json({ error: 'Failed to delete configuration' }, { status: 500 })
+      return NextResponse.json({ error: 'No se pudo eliminar la configuración' }, { status: 500 })
     }
     return NextResponse.json({ success: true })
   } catch (err) {

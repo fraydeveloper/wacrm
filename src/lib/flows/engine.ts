@@ -200,6 +200,15 @@ async function loadActiveRunForContact(
   return rows[0] ?? null;
 }
 
+/** True when the run has sat idle past its flow's `on_timeout_hours`. */
+async function isRunStale(db: AdminClient, run: FlowRunRow): Promise<boolean> {
+  const last = Date.parse(run.last_advanced_at ?? run.started_at);
+  if (!Number.isFinite(last)) return false;
+  const flow = await loadFlow(db, run.flow_id);
+  const policy = resolveFallbackPolicy(flow?.fallback_policy);
+  return Date.now() - last > policy.on_timeout_hours * 3_600_000;
+}
+
 async function loadFlow(
   db: AdminClient,
   flowId: string,
@@ -831,11 +840,24 @@ export async function dispatchInboundToFlows(
 ): Promise<DispatchInboundResult> {
   const db = supabaseAdmin();
   try {
-    const activeRun = await loadActiveRunForContact(
+    let activeRun = await loadActiveRunForContact(
       db,
       input.accountId,
       input.contactId,
     );
+
+    // Lazy timeout. The cron sweep (/api/flows/cron) is the primary
+    // cleanup, but deployments without a scheduler would otherwise keep
+    // an abandoned run alive forever — swallowing every later message
+    // from that contact (no automations, no AI reply). Expire it here
+    // using the same `on_timeout_hours` policy the cron applies.
+    if (activeRun && (await isRunStale(db, activeRun))) {
+      await endRun(db, activeRun.id, "timed_out", "inactivity_timeout");
+      await logEvent(db, activeRun.id, "timeout", activeRun.current_node_key, {
+        source: "inbound_lazy_check",
+      });
+      activeRun = null;
+    }
 
     // Idempotency — only matters if there's already a run for this
     // contact. For new runs, the partial unique index catches duplicate

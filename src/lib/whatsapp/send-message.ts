@@ -198,14 +198,14 @@ export async function sendMessageToConversation(
     .single();
 
   if (convError || !conversation) {
-    throw new SendMessageError('not_found', 'Conversation not found', 404);
+    throw new SendMessageError('not_found', 'Conversación no encontrada', 404);
   }
 
   const contact = conversation.contact;
   if (!contact?.phone) {
     throw new SendMessageError(
       'bad_request',
-      'Contact phone number not found',
+      'No se encontró el teléfono del contacto',
       400
     );
   }
@@ -214,7 +214,7 @@ export async function sendMessageToConversation(
   if (!isValidE164(sanitizedPhone)) {
     throw new SendMessageError(
       'bad_request',
-      'Invalid phone number format',
+      'Formato de número de teléfono no válido',
       400
     );
   }

@@ -71,7 +71,7 @@ export async function POST(request: Request) {
       .single()
     if (error || !doc) {
       console.error('[ai/knowledge/google-sheet POST] insert error:', error)
-      return NextResponse.json({ error: 'Failed to save document' }, { status: 500 })
+      return NextResponse.json({ error: 'No se pudo guardar el documento' }, { status: 500 })
     }
 
     const { key: embeddingsApiKey, corrupt } = await loadEmbeddingsKey(supabase, accountId)

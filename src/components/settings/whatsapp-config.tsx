@@ -475,7 +475,7 @@ export function WhatsAppConfig() {
                   }
                 >
                   {isRegistered
-                    ? 'Registrado — Meta entregará eventos a wacrm'
+                    ? 'Registrado — Meta entregará eventos a la plataforma'
                     : 'No registrado — Meta no entregará eventos'}
                 </AlertTitle>
               </div>
@@ -656,7 +656,7 @@ export function WhatsAppConfig() {
                   Meta Business Manager → Cuentas de WhatsApp → Números
                   de teléfono → Verificación en dos pasos
                 </strong>
-                , y luego pégalo aquí para que wacrm pueda suscribir el
+                , y luego pégalo aquí para que la plataforma pueda suscribir el
                 número — de lo contrario Meta enviará los eventos entrantes
                 a la última app que lo haya reclamado (el síntoma que
                 afecta a segundos números bajo una WABA compartida).{' '}

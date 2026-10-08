@@ -49,7 +49,7 @@ export interface TemplatePayload {
 }
 
 export function validateTemplateName(name: string): void {
-  if (!name) throw new Error('Template name is required.');
+  if (!name) throw new Error('El nombre de la plantilla es obligatorio.');
   if (!TEMPLATE_LIMITS.nameRegex.test(name)) {
     throw new Error(
       'Template name must use only lowercase letters, digits, and underscores (1-512 chars).',
@@ -88,7 +88,7 @@ function assertContiguous(indices: number[], where: string): void {
 }
 
 export function validateBody(bodyText: string): number[] {
-  if (!bodyText.trim()) throw new Error('Body text is required.');
+  if (!bodyText.trim()) throw new Error('El texto del cuerpo es obligatorio.');
   if (bodyText.length > TEMPLATE_LIMITS.bodyMaxLength) {
     throw new Error(
       `Body text exceeds ${TEMPLATE_LIMITS.bodyMaxLength} chars (got ${bodyText.length}).`,
@@ -324,7 +324,7 @@ export function validateTemplatePayload(payload: TemplatePayload): {
 } {
   validateTemplateName(payload.name);
   if (!payload.language?.trim()) {
-    throw new Error('Language is required.');
+    throw new Error('El idioma es obligatorio.');
   }
   const bodyVars = validateBody(payload.body_text);
   validateFooter(payload.footer_text);

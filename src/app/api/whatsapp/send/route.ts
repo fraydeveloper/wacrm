@@ -31,7 +31,7 @@ export async function POST(request: Request) {
 
     if (authError || !user) {
       return NextResponse.json(
-        { error: 'Unauthorized' },
+        { error: 'No autorizado' },
         { status: 401 }
       )
     }
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     const accountId = profile?.account_id as string | undefined
     if (!accountId) {
       return NextResponse.json(
-        { error: 'Your profile is not linked to an account.' },
+        { error: 'Tu perfil no está vinculado a una cuenta.' },
         { status: 403 },
       )
     }
@@ -121,7 +121,7 @@ export async function POST(request: Request) {
 
       if (convError || !data) {
         return NextResponse.json(
-          { error: 'Conversation not found' },
+          { error: 'Conversación no encontrada' },
           { status: 404 }
         )
       }
@@ -138,7 +138,7 @@ export async function POST(request: Request) {
 
       if (contactErr || !contactRow) {
         return NextResponse.json(
-          { error: 'Contact not found' },
+          { error: 'Contacto no encontrado' },
           { status: 404 }
         )
       }
@@ -151,7 +151,7 @@ export async function POST(request: Request) {
       )
       if (!resolved) {
         return NextResponse.json(
-          { error: 'Failed to open a conversation for this contact' },
+          { error: 'No se pudo abrir una conversación con este contacto' },
           { status: 500 }
         )
       }
@@ -160,7 +160,7 @@ export async function POST(request: Request) {
 
     if (!conversationId) {
       return NextResponse.json(
-        { error: 'Conversation not found' },
+        { error: 'Conversación no encontrada' },
         { status: 404 }
       )
     }
@@ -200,7 +200,7 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error('Error in WhatsApp send POST:', error)
     return NextResponse.json(
-      { error: 'Failed to send message' },
+      { error: 'No se pudo enviar el mensaje' },
       { status: 500 }
     )
   }

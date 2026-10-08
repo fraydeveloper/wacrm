@@ -268,7 +268,7 @@ export function AiConfig({ onConfigSaved }: { onConfigSaved?: () => void } = {})
       <div className="flex items-start justify-between gap-4 mb-6">
         <SettingsPanelHead
           title="Configuración del agente"
-          description="Trae tu propia clave de OpenAI, Anthropic, DeepSeek, Gemini o Z.ai. wacrm llama directamente al proveedor con tu clave — sin cargos por asiento de IA, y tus datos se quedan contigo. Esto potencia las respuestas con IA en la bandeja de entrada, el bot de auto-respuesta y la Zona de pruebas."
+          description="Trae tu propia clave de OpenAI, Anthropic, DeepSeek, Gemini o Z.ai. La plataforma llama directamente al proveedor con tu clave — sin cargos por asiento de IA, y tus datos se quedan contigo. Esto potencia las respuestas con IA en la bandeja de entrada, el bot de auto-respuesta y la Zona de pruebas."
         />
         {configured && (
           <div

@@ -50,10 +50,10 @@ export async function POST(request: Request) {
       .maybeSingle()
     if (convErr) {
       console.error('[ai/draft] conversation lookup error:', convErr)
-      return NextResponse.json({ error: 'Failed to load conversation' }, { status: 500 })
+      return NextResponse.json({ error: 'No se pudo cargar la conversación' }, { status: 500 })
     }
     if (!conversation) {
-      return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Conversación no encontrada' }, { status: 404 })
     }
 
     const config = await loadAiConfig(supabase, accountId).catch((err) => {
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
     if (!config) {
       return NextResponse.json(
         {
-          error: 'AI assistant is not set up. Enable it in Settings → AI Assistant.',
+          error: 'El asistente de IA no está configurado. Actívalo en Agentes IA.',
           code: 'ai_not_configured',
         },
         { status: 400 },
@@ -80,7 +80,7 @@ export async function POST(request: Request) {
     if (messages.length === 0) {
       return NextResponse.json(
         {
-          error: 'No messages to draft from yet.',
+          error: 'Aún no hay mensajes para generar un borrador.',
           code: 'no_messages',
         },
         { status: 400 },

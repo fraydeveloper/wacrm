@@ -43,6 +43,11 @@ interface AccountSummary {
   /** Default deal currency (ISO-4217). NOT NULL DEFAULT 'USD' in the
    *  DB (migration 021); narrowed to DEFAULT_CURRENCY when absent. */
   default_currency: string;
+  /** Branding (migration 037). Null when unset or before 037 is applied. */
+  brand_name: string | null;
+  brand_logo_url: string | null;
+  brand_color: string | null;
+  brand_color_secondary: string | null;
 }
 
 interface AuthContextValue {
@@ -167,13 +172,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // account name lookup itself can't.
         let accountRow: AccountSummary | null = null;
         if (data.account_id) {
-          const { data: account, error: accountErr } = await supabase
+          // Brand columns come from migration 037. If that migration
+          // hasn't been applied yet the select fails with 42703
+          // (undefined column) — retry without them so the account
+          // context (currency, role chrome) never breaks over branding.
+          let { data: account, error: accountErr } = await supabase
             .from("accounts")
             // default_currency added in migration 021; narrowed to the
             // USD fallback below for older schemas where it reads null.
-            .select("id, name, default_currency")
+            .select(
+              "id, name, default_currency, brand_name, brand_logo_url, brand_color, brand_color_secondary",
+            )
             .eq("id", data.account_id)
             .maybeSingle();
+          if (accountErr?.code === "42703") {
+            ({ data: account, error: accountErr } = await supabase
+              .from("accounts")
+              .select("id, name, default_currency")
+              .eq("id", data.account_id)
+              .maybeSingle());
+          }
           if (accountErr) {
             console.error("[AuthProvider] fetchAccount error:", {
               message: accountErr.message,
@@ -182,10 +200,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               code: accountErr.code,
             });
           } else if (account) {
+            const brand = account as {
+              brand_name?: string | null;
+              brand_logo_url?: string | null;
+              brand_color?: string | null;
+              brand_color_secondary?: string | null;
+            };
             accountRow = {
               id: account.id,
               name: account.name,
               default_currency: account.default_currency ?? DEFAULT_CURRENCY,
+              brand_name: brand.brand_name ?? null,
+              brand_logo_url: brand.brand_logo_url ?? null,
+              brand_color: brand.brand_color ?? null,
+              brand_color_secondary: brand.brand_color_secondary ?? null,
             };
           }
         }

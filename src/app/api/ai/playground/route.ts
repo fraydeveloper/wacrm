@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     if (!config) {
       return NextResponse.json(
         {
-          error: 'No agent configured yet. Add your provider key in Setup.',
+          error: 'Aún no hay un agente configurado. Agrega la llave de tu proveedor en Configuración.',
           code: 'ai_not_configured',
         },
         { status: 400 },

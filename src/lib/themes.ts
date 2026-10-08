@@ -14,16 +14,25 @@
  */
 
 export const THEME_IDS = [
+  "brand",
+  "ted",
+  "gold",
   "violet",
   "emerald",
   "cobalt",
+  "sky",
+  "indigo",
   "amber",
   "rose",
+  "slate",
 ] as const;
 
 export type ThemeId = (typeof THEME_IDS)[number];
 
-export const DEFAULT_THEME: ThemeId = "violet";
+/** Fallback accent when the device has no saved choice and the account
+ *  has no brand color yet (with a brand color, "brand" wins — see the
+ *  boot script in layout.tsx and BrandSync). */
+export const DEFAULT_THEME: ThemeId = "ted";
 
 export const STORAGE_KEY = "wacrm.theme";
 
@@ -68,34 +77,71 @@ export interface ThemeMeta {
 
 export const THEMES: ReadonlyArray<ThemeMeta> = [
   {
+    id: "brand",
+    name: "Color de la empresa",
+    tagline:
+      "Usa el color configurado en Configuración → Empresa y marca. Se aplica a todo el equipo.",
+    swatch: "var(--brand-primary, oklch(0.526 0.247 293))",
+  },
+  {
+    id: "ted",
+    name: "Verde TED",
+    tagline: "El verde institucional de TED Innova — serio y confiable.",
+    swatch: "#00745f",
+  },
+  {
+    id: "gold",
+    name: "Dorado",
+    tagline: "El dorado del logo — cálido y llamativo.",
+    swatch: "#f2b417",
+  },
+  {
     id: "violet",
-    name: "Violet",
-    tagline: "The default — confident, slightly playful.",
+    name: "Violeta",
+    tagline: "Seguro y algo juguetón.",
     swatch: "oklch(0.526 0.247 293)",
   },
   {
     id: "emerald",
-    name: "Emerald",
-    tagline: "Growth-coded, nods at messaging without copying WhatsApp green.",
+    name: "Esmeralda",
+    tagline: "Fresco y de crecimiento, sin copiar el verde de WhatsApp.",
     swatch: "oklch(0.62 0.16 162)",
   },
   {
     id: "cobalt",
-    name: "Cobalt",
-    tagline: "Clean B2B-SaaS blue — calm and product-y.",
+    name: "Cobalto",
+    tagline: "Azul limpio, tranquilo y profesional.",
     swatch: "oklch(0.585 0.2 254)",
   },
   {
+    id: "sky",
+    name: "Celeste",
+    tagline: "Claro y luminoso — ideal para educación y salud.",
+    swatch: "#0ea5e9",
+  },
+  {
+    id: "indigo",
+    name: "Índigo",
+    tagline: "Azul profundo, corporativo y elegante.",
+    swatch: "#4f46e5",
+  },
+  {
     id: "amber",
-    name: "Amber",
-    tagline: "Warm and friendly — feels good for SMB teams.",
+    name: "Ámbar",
+    tagline: "Cálido y amigable — ideal para pequeños negocios.",
     swatch: "oklch(0.745 0.16 65)",
   },
   {
     id: "rose",
-    name: "Rose",
-    tagline: "Bold and modern — D2C, creator-economy, lifestyle.",
+    name: "Rosa",
+    tagline: "Audaz y moderno — moda, estilo de vida, creadores.",
     swatch: "oklch(0.645 0.22 16)",
+  },
+  {
+    id: "slate",
+    name: "Grafito",
+    tagline: "Sobrio y neutro — deja que el contenido destaque.",
+    swatch: "#475569",
   },
 ];
 

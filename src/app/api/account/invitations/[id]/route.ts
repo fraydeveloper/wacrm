@@ -51,7 +51,7 @@ export async function DELETE(
     if (error) {
       console.error("[DELETE /api/account/invitations/[id]] error:", error);
       return NextResponse.json(
-        { error: "Failed to revoke invitation" },
+        { error: "No se pudo revocar la invitación" },
         { status: 500 },
       );
     }
@@ -61,7 +61,7 @@ export async function DELETE(
       // account). 404 either way — surfacing "exists but not
       // yours" would leak existence.
       return NextResponse.json(
-        { error: "Invitation not found" },
+        { error: "Invitación no encontrada" },
         { status: 404 },
       );
     }

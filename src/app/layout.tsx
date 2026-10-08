@@ -12,6 +12,11 @@ import {
   STORAGE_KEY,
   THEME_IDS,
 } from "@/lib/themes";
+import {
+  BRAND_CSS_VARS,
+  BRAND_STORAGE_KEY,
+  DEFAULT_BRAND_NAME,
+} from "@/lib/brand";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -20,10 +25,11 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: "wacrm",
-    template: "%s — wacrm",
+    default: DEFAULT_BRAND_NAME,
+    template: `%s — ${DEFAULT_BRAND_NAME}`,
   },
-  description: "Self-hostable CRM template for WhatsApp.",
+  description:
+    "CRM omnicanal con agentes de IA para WhatsApp, Messenger y Telegram.",
   robots: {
     index: false,
     follow: false,
@@ -61,7 +67,29 @@ const THEME_BOOT_SCRIPT = `
     var THEME_DEFAULT = ${JSON.stringify(DEFAULT_THEME)};
     var THEMES = ${JSON.stringify(THEME_IDS)};
     var savedTheme = localStorage.getItem(THEME_KEY);
-    d.dataset.theme = THEMES.indexOf(savedTheme) !== -1 ? savedTheme : THEME_DEFAULT;
+
+    // Cached account brand colors (validated as #RRGGBB before use so
+    // nothing but a hex color ever reaches the style attribute).
+    var HEX = /^#[0-9a-fA-F]{6}$/;
+    var hasBrand = false;
+    try {
+      var brand = JSON.parse(localStorage.getItem(${JSON.stringify(BRAND_STORAGE_KEY)}) || "null");
+      if (brand && HEX.test(brand.primary)) {
+        var n = parseInt(brand.primary.slice(1), 16);
+        var lin = function (c) { c = c / 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+        var L = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+        d.style.setProperty(${JSON.stringify(BRAND_CSS_VARS.primary)}, brand.primary);
+        d.style.setProperty(${JSON.stringify(BRAND_CSS_VARS.primaryFg)}, (L + 0.05) / 0.05 >= 1.05 / (L + 0.05) ? "#111111" : "#ffffff");
+        hasBrand = true;
+      }
+      if (brand && HEX.test(brand.secondary)) {
+        d.style.setProperty(${JSON.stringify(BRAND_CSS_VARS.secondary)}, brand.secondary);
+      }
+    } catch (_b) {}
+
+    d.dataset.theme = THEMES.indexOf(savedTheme) !== -1
+      ? savedTheme
+      : (hasBrand ? "brand" : THEME_DEFAULT);
 
     var MODE_KEY = ${JSON.stringify(MODE_STORAGE_KEY)};
     var MODE_DEFAULT = ${JSON.stringify(DEFAULT_MODE)};
@@ -82,7 +110,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="es"
       data-theme={DEFAULT_THEME}
       data-mode={DEFAULT_MODE}
       className={`${inter.variable} h-full antialiased`}

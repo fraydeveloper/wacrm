@@ -36,7 +36,7 @@ describe('validateTemplateName', () => {
     expect(() => validateTemplateName('OrderV2')).toThrow(/lowercase/);
   });
   it('rejects empty', () => {
-    expect(() => validateTemplateName('')).toThrow(/required/);
+    expect(() => validateTemplateName('')).toThrow(/obligatori/);
   });
   it('rejects spaces and dashes', () => {
     expect(() => validateTemplateName('order v2')).toThrow();
@@ -46,7 +46,7 @@ describe('validateTemplateName', () => {
 
 describe('validateBody', () => {
   it('rejects empty', () => {
-    expect(() => validateBody('   ')).toThrow(/required/);
+    expect(() => validateBody('   ')).toThrow(/obligatori/);
   });
   it('rejects > 1024 chars', () => {
     expect(() => validateBody('x'.repeat(TEMPLATE_LIMITS.bodyMaxLength + 1))).toThrow(

@@ -97,7 +97,7 @@ export function rateLimitResponse(result: RateLimitResult): NextResponse {
   const retryAfterSec = Math.max(1, Math.ceil((result.reset - Date.now()) / 1000));
   return NextResponse.json(
     {
-      error: 'Rate limit exceeded',
+      error: 'Demasiadas solicitudes, intenta de nuevo en unos segundos',
       retry_after_seconds: retryAfterSec,
     },
     {
@@ -117,10 +117,14 @@ export const RATE_LIMITS = {
   /** Individual message send. 60/min per user = one per second
    *  sustained, comfortable for a live human typing. */
   send: { limit: 60, windowMs: 60_000 },
-  /** Broadcast dispatch. 5/min per user — even a 1 000-recipient
-   *  broadcast is one call; this caps the rate at which a single user
-   *  can launch campaigns, not the messages inside one. */
-  broadcast: { limit: 5, windowMs: 60_000 },
+  /** Broadcast batch dispatch. The sending hook posts one request per
+   *  batch of 10 recipients with a 1 s pause, i.e. ~60 calls/min for a
+   *  large campaign. The old 5/min budget 429'd every batch after the
+   *  fifth, so any campaign beyond ~50 contacts marked the rest as
+   *  failed. 90/min leaves headroom for that cadence while still
+   *  bounding a runaway script (each call is capped at
+   *  BROADCAST_MAX_RECIPIENTS_PER_CALL recipients server-side). */
+  broadcast: { limit: 90, windowMs: 60_000 },
   /** Reaction add/swap/remove. More permissive than send — users
    *  fidget with reactions and a single "swap" is actually two calls
    *  (remove + add) under the hood. */

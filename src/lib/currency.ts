@@ -28,6 +28,7 @@ export interface CurrencyOption {
  * list to offer more — nothing else needs to change.
  */
 export const CURRENCIES: CurrencyOption[] = [
+  { code: "PEN", label: "Sol peruano", symbol: "S/" },
   { code: "USD", label: "Dólar estadounidense", symbol: "$" },
   { code: "EUR", label: "Euro", symbol: "€" },
   { code: "GBP", label: "Libra esterlina", symbol: "£" },

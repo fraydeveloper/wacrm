@@ -30,9 +30,9 @@ export async function POST(_request: Request, { params }: Params) {
       .maybeSingle()
     if (fetchErr) {
       console.error('[knowledge/[id]/sync-sheet] fetch error:', fetchErr)
-      return NextResponse.json({ error: 'Failed to load document' }, { status: 500 })
+      return NextResponse.json({ error: 'No se pudo cargar el documento' }, { status: 500 })
     }
-    if (!doc) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (!doc) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
     if (doc.source_type !== 'google_sheet' || !doc.source_spreadsheet_id || !doc.source_sheet_range) {
       return NextResponse.json({ error: 'This document is not backed by a Google Sheet' }, { status: 400 })
     }
@@ -61,7 +61,7 @@ export async function POST(_request: Request, { params }: Params) {
       .eq('id', id)
     if (updateErr) {
       console.error('[knowledge/[id]/sync-sheet] update error:', updateErr)
-      return NextResponse.json({ error: 'Failed to update document' }, { status: 500 })
+      return NextResponse.json({ error: 'No se pudo actualizar el documento' }, { status: 500 })
     }
 
     const { key: embeddingsApiKey, corrupt } = await loadEmbeddingsKey(supabase, accountId)
