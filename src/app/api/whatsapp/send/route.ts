@@ -10,6 +10,14 @@ import {
   validateSendMessageParams,
   SendMessageError,
 } from '@/lib/whatsapp/send-message'
+import { sendChannelText, type Channel } from '@/lib/channels/router'
+
+const CHANNEL_LABELS: Record<Channel, string> = {
+  whatsapp: 'WhatsApp',
+  messenger: 'Messenger',
+  telegram: 'Telegram',
+  instagram: 'Instagram',
+}
 
 // The dashboard's outbound-send endpoint. It owns auth, per-user rate
 // limiting, and the two ways the UI targets a thread — an existing
@@ -163,6 +171,57 @@ export async function POST(request: Request) {
         { error: 'Conversación no encontrada' },
         { status: 404 }
       )
+    }
+
+    // Non-WhatsApp threads (Messenger, Telegram, later Instagram) go
+    // through the channel router instead of the WhatsApp core — those
+    // contacts have no phone number, only a channel identity. Text only
+    // for now: the channel senders don't handle media or templates.
+    const { data: thread } = await supabase
+      .from('conversations')
+      .select('channel, contact_id')
+      .eq('id', conversationId)
+      .eq('account_id', accountId)
+      .maybeSingle()
+
+    const channel = (thread?.channel ?? 'whatsapp') as Channel
+    if (thread && channel !== 'whatsapp') {
+      if (message_type !== 'text') {
+        return NextResponse.json(
+          {
+            error: `En ${CHANNEL_LABELS[channel]} por ahora solo se puede enviar texto.`,
+          },
+          { status: 400 }
+        )
+      }
+      if (channel === 'instagram') {
+        return NextResponse.json(
+          { error: 'Instagram todavía no está disponible para enviar mensajes.' },
+          { status: 400 }
+        )
+      }
+      try {
+        const { external_message_id } = await sendChannelText({
+          channel,
+          accountId,
+          userId: user.id,
+          conversationId,
+          contactId: thread.contact_id,
+          text: content_text,
+          senderType: 'agent',
+        })
+        return NextResponse.json({
+          success: true,
+          external_message_id,
+        })
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err)
+        console.error(`[send] ${channel} manual send failed:`, reason)
+        return NextResponse.json(
+          { error: `${CHANNEL_LABELS[channel]} rechazó el mensaje: ${reason}` },
+          { status: 502 }
+        )
+      }
     }
 
     // Delegate to the shared send core (validates, sends to Meta with

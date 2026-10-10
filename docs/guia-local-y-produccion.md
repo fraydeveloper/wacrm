@@ -195,6 +195,7 @@ aplicada, pero así evitas avisos temporales.)
 | Archivo | Qué agrega |
 |---|---|
 | `037_account_branding.sql` | Nombre, logo y colores de la empresa (Configuración → Empresa y marca) |
+| `038_channel_app_secret.sql` | App Secret propio por empresa para WhatsApp y Messenger (ver [configuracion-por-modalidad.md](configuracion-por-modalidad.md)) |
 
 ---
 
@@ -247,5 +248,6 @@ trabajos (uno por URL), cada 5 minutos, con ese encabezado.
 | El build falla en Vercel pero en local funciona | Variable faltante en Vercel o archivo sin subir | Revisar Parte 5 y `git status` |
 | "Falta aplicar la migración 037..." al guardar la marca | No se ejecutó la migración | Parte 4 |
 | WhatsApp dice "token inválido" tras cambiar de entorno | `ENCRYPTION_KEY` distinta | Usar la misma clave o volver a guardar la configuración de WhatsApp |
+| `EPERM: operation not permitted, rename ... .next\dev\...` en localhost | Windows bloquea los archivos temporales de Turbopack (antivirus/indexador) | `npm run dev` ya usa webpack para evitarlo. Si vuelve a pasar: detén el servidor (`Ctrl+C`), borra la carpeta `.next` y vuelve a ejecutar `npm run dev` |
 | No llegan mensajes en local | Los webhooks apuntan a producción | Normal; probar en producción o usar ngrok |
 | Difusión: "Demasiadas solicitudes" | Límite de seguridad | Se reintenta solo; si persiste, esperar 1 minuto |

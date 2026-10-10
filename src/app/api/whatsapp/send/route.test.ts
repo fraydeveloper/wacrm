@@ -152,6 +152,11 @@ vi.mock('@/lib/whatsapp/meta-api', () => ({
   sendMediaMessage: vi.fn(),
 }))
 
+const { sendChannelText } = vi.hoisted(() => ({
+  sendChannelText: vi.fn(async () => ({ external_message_id: 'ext-1' })),
+}))
+vi.mock('@/lib/channels/router', () => ({ sendChannelText }))
+
 import { POST } from './route'
 
 function postContactTemplate(overrides: Record<string, unknown> = {}) {
@@ -257,5 +262,87 @@ describe('POST /api/whatsapp/send — contact_id template path', () => {
       }),
     )
     expect(res.status).toBe(400)
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Manual inbox replies on non-WhatsApp threads: contacts there have no phone,
+// so the route must hand the text to the channel router (as the agent).
+// ---------------------------------------------------------------------------
+
+function postToConversation(body: Record<string, unknown>) {
+  return POST(
+    new Request('http://localhost/api/whatsapp/send', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ conversation_id: 'conv-fb', ...body }),
+    }),
+  )
+}
+
+describe('POST /api/whatsapp/send — Messenger/Telegram threads', () => {
+  beforeEach(() => {
+    conversationInserts.length = 0
+    messageInserts.length = 0
+    createdConversation = null
+    contactRow = null
+    existingConversation = {
+      id: 'conv-fb',
+      account_id: 'acct-1',
+      contact_id: 'contact-fb',
+      channel: 'messenger',
+    }
+    supabaseMock = makeSupabaseMock()
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('sends text through the channel router as the agent', async () => {
+    const res = await postToConversation({ message_type: 'text', content_text: 'Hola' })
+    expect(res.status).toBe(200)
+
+    expect(sendChannelText).toHaveBeenCalledTimes(1)
+    expect(sendChannelText).toHaveBeenCalledWith(
+      expect.objectContaining({
+        channel: 'messenger',
+        accountId: 'acct-1',
+        conversationId: 'conv-fb',
+        contactId: 'contact-fb',
+        text: 'Hola',
+        senderType: 'agent',
+      }),
+    )
+    // The WhatsApp core never ran.
+    expect(messageInserts).toHaveLength(0)
+  })
+
+  it('routes Telegram threads too', async () => {
+    existingConversation = { ...existingConversation, channel: 'telegram' }
+    const res = await postToConversation({ message_type: 'text', content_text: 'Hola' })
+    expect(res.status).toBe(200)
+    expect(sendChannelText).toHaveBeenCalledWith(
+      expect.objectContaining({ channel: 'telegram' }),
+    )
+  })
+
+  it('rejects media on non-WhatsApp channels', async () => {
+    const res = await postToConversation({
+      message_type: 'image',
+      media_url: 'https://x.supabase.co/a.png',
+    })
+    const json = await res.json()
+    expect(res.status).toBe(400)
+    expect(json.error).toMatch(/solo se puede enviar texto/i)
+    expect(sendChannelText).not.toHaveBeenCalled()
+  })
+
+  it('surfaces the channel error as 502', async () => {
+    sendChannelText.mockRejectedValueOnce(new Error('outside 24h window'))
+    const res = await postToConversation({ message_type: 'text', content_text: 'Hola' })
+    const json = await res.json()
+    expect(res.status).toBe(502)
+    expect(json.error).toMatch(/Messenger rechazó el mensaje: outside 24h window/)
   })
 })

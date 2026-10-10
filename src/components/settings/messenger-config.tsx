@@ -29,6 +29,7 @@ import {
   AccordionContent,
 } from '@/components/ui/accordion';
 import type { MessengerConfig as MessengerConfigType } from '@/types';
+import { AppSecretField, appSecretPayload } from './app-secret-field';
 
 const MASKED_TOKEN = '••••••••••••••••';
 
@@ -59,6 +60,8 @@ export function MessengerConfig() {
   const [pageId, setPageId] = useState('');
   const [pageAccessToken, setPageAccessToken] = useState('');
   const [verifyToken, setVerifyToken] = useState('');
+  const [appSecret, setAppSecret] = useState('');
+  const [clearAppSecret, setClearAppSecret] = useState(false);
   const [tokenEdited, setTokenEdited] = useState(false);
 
   const webhookUrl =
@@ -84,12 +87,16 @@ export function MessengerConfig() {
         setPageId(data.page_id || '');
         setPageAccessToken(MASKED_TOKEN);
         setVerifyToken('');
+        setAppSecret('');
+        setClearAppSecret(false);
         setTokenEdited(false);
       } else {
         setConfig(null);
         setPageId('');
         setPageAccessToken('');
         setVerifyToken('');
+        setAppSecret('');
+        setClearAppSecret(false);
         setTokenEdited(false);
       }
 
@@ -151,6 +158,7 @@ export function MessengerConfig() {
       const payload: Record<string, unknown> = {
         page_id: pageId.trim(),
         verify_token: verifyToken.trim() || null,
+        ...appSecretPayload(appSecret, clearAppSecret),
       };
 
       if (tokenEdited && pageAccessToken !== MASKED_TOKEN && pageAccessToken.trim()) {
@@ -240,6 +248,8 @@ export function MessengerConfig() {
       setPageId('');
       setPageAccessToken('');
       setVerifyToken('');
+      setAppSecret('');
+      setClearAppSecret(false);
       setTokenEdited(false);
       setConnectionStatus('disconnected');
       setNeedsReset(false);
@@ -396,6 +406,14 @@ export function MessengerConfig() {
                   Una cadena personalizada que tú creas. Debe coincidir con el token que configures en los ajustes de webhook de Meta.
                 </p>
               </div>
+
+              <AppSecretField
+                value={appSecret}
+                onChange={setAppSecret}
+                hasStoredSecret={Boolean(config?.app_secret)}
+                clearRequested={clearAppSecret}
+                onClearRequestedChange={setClearAppSecret}
+              />
             </CardContent>
           </Card>
 

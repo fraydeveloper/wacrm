@@ -226,8 +226,13 @@ export function MessageThread({
     };
   }, []);
 
+  // Telegram has no customer-service window; WhatsApp and Messenger only
+  // allow free-form replies within 24 h of the customer's last message.
+  const hasSessionWindow = conversation?.channel !== "telegram";
+
   // 24-hour session timer
   const sessionInfo = useMemo(() => {
+    if (!hasSessionWindow) return { expired: false, remaining: "" };
     if (!messages.length) return { expired: false, remaining: "" };
 
     // Find last customer message
@@ -251,7 +256,7 @@ export function MessageThread({
         : `Quedan ${Math.floor(hoursLeft * 60)}m`;
 
     return { expired, remaining };
-  }, [messages]);
+  }, [messages, hasSessionWindow]);
 
   // Store latest callback in a ref so fetchMessages doesn't need to
   // depend on `onMessagesLoaded` — otherwise parent re-renders cause
@@ -900,16 +905,18 @@ export function MessageThread({
           </div>
           {/* Session timer badge — hidden on the narrowest phones so
               the name + back arrow keep their room. */}
-          <Badge
-            variant="outline"
-            className={cn(
-              "ml-1 hidden gap-1 border-border text-[10px] sm:inline-flex sm:ml-2",
-              sessionInfo.expired ? "text-red-400" : "text-primary"
-            )}
-          >
-            <Clock className="h-3 w-3" />
-            {sessionInfo.remaining}
-          </Badge>
+          {hasSessionWindow && (
+            <Badge
+              variant="outline"
+              className={cn(
+                "ml-1 hidden gap-1 border-border text-[10px] sm:inline-flex sm:ml-2",
+                sessionInfo.expired ? "text-red-400" : "text-primary"
+              )}
+            >
+              <Clock className="h-3 w-3" />
+              {sessionInfo.remaining}
+            </Badge>
+          )}
         </div>
 
         <div className="flex items-center gap-2">
@@ -1188,6 +1195,7 @@ export function MessageThread({
       {/* Composer */}
       <MessageComposer
         conversationId={conversation.id}
+        channel={conversation.channel ?? "whatsapp"}
         sessionExpired={sessionInfo.expired}
         onSend={handleSend}
         onSendMedia={handleSendMedia}

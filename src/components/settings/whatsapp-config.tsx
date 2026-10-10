@@ -29,6 +29,7 @@ import {
   AccordionContent,
 } from '@/components/ui/accordion';
 import type { WhatsAppConfig as WhatsAppConfigType } from '@/types';
+import { AppSecretField, appSecretPayload } from './app-secret-field';
 
 const MASKED_TOKEN = '••••••••••••••••';
 
@@ -66,6 +67,8 @@ export function WhatsAppConfig() {
   const [accessToken, setAccessToken] = useState('');
   const [verifyToken, setVerifyToken] = useState('');
   const [pin, setPin] = useState('');
+  const [appSecret, setAppSecret] = useState('');
+  const [clearAppSecret, setClearAppSecret] = useState(false);
   const [tokenEdited, setTokenEdited] = useState(false);
 
   // True once /register has succeeded on Meta's side (timestamp set
@@ -118,6 +121,8 @@ export function WhatsAppConfig() {
         setAccessToken(MASKED_TOKEN);
         setVerifyToken('');
         setPin('');
+        setAppSecret('');
+        setClearAppSecret(false);
         setTokenEdited(false);
       } else {
         setConfig(null);
@@ -126,6 +131,8 @@ export function WhatsAppConfig() {
         setAccessToken('');
         setVerifyToken('');
         setPin('');
+        setAppSecret('');
+        setClearAppSecret(false);
         setTokenEdited(false);
       }
       // Clear any stale probe result when reloading the row.
@@ -205,6 +212,7 @@ export function WhatsAppConfig() {
         // requires it on first save or when changing numbers; for a
         // simple token rotation, leaving it blank skips re-register.
         pin: pin.trim() || null,
+        ...appSecretPayload(appSecret, clearAppSecret),
       };
 
       if (tokenEdited && accessToken !== MASKED_TOKEN && accessToken.trim()) {
@@ -632,6 +640,14 @@ export function WhatsAppConfig() {
                 Una cadena personalizada que tú creas. Debe coincidir con el token que configures en los ajustes de webhook de Meta.
               </p>
             </div>
+
+            <AppSecretField
+              value={appSecret}
+              onChange={setAppSecret}
+              hasStoredSecret={Boolean(config?.app_secret)}
+              clearRequested={clearAppSecret}
+              onClearRequestedChange={setClearAppSecret}
+            />
 
             <div className="space-y-2">
               <Label className="text-muted-foreground">

@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { createClient as createAdminClient } from '@supabase/supabase-js'
 import { verifyPageToken } from '@/lib/messenger/api'
 import { encrypt, decrypt } from '@/lib/whatsapp/encryption'
+import { appSecretPatch } from '@/lib/inbound/meta-account-secrets'
 
 /** Mirrors src/app/api/whatsapp/config/route.ts's resolveAccountId. */
 async function resolveAccountId(
@@ -148,6 +149,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'page_id and page_access_token are required' }, { status: 400 })
     }
 
+    // Optional own-Meta-app secret (migration 038).
+    const secret = appSecretPatch(body)
+    if ('error' in secret) {
+      return NextResponse.json({ error: secret.error }, { status: 400 })
+    }
+
     // Reject if another account already claimed this page_id — same
     // one-page-per-account rationale as whatsapp_config's phone_number_id
     // check (issue #136): without it, two accounts binding the same page
@@ -209,6 +216,7 @@ export async function POST(request: Request) {
       page_id,
       page_access_token: encryptedToken,
       verify_token: encryptedVerifyToken,
+      ...secret.patch,
       status: 'connected',
       connected_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),

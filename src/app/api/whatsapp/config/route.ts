@@ -7,6 +7,7 @@ import {
   verifyPhoneNumber,
 } from '@/lib/whatsapp/meta-api'
 import { encrypt, decrypt } from '@/lib/whatsapp/encryption'
+import { appSecretPatch } from '@/lib/inbound/meta-account-secrets'
 
 /**
  * Resolve the caller's account_id from their profile. Inlined here
@@ -194,6 +195,12 @@ export async function POST(request: Request) {
       )
     }
 
+    // Optional own-Meta-app secret (migration 038).
+    const secret = appSecretPatch(body)
+    if ('error' in secret) {
+      return NextResponse.json({ error: secret.error }, { status: 400 })
+    }
+
     if (pin !== undefined && pin !== null && pin !== '') {
       if (typeof pin !== 'string' || !/^\d{6}$/.test(pin)) {
         return NextResponse.json(
@@ -358,6 +365,7 @@ export async function POST(request: Request) {
       waba_id: waba_id || null,
       access_token: encryptedAccessToken,
       verify_token: encryptedVerifyToken,
+      ...secret.patch,
       status: registrationError ? 'disconnected' : 'connected',
       connected_at: registrationError ? null : new Date().toISOString(),
       registered_at: registrationError ? null : registeredAt,

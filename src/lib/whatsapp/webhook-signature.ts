@@ -25,13 +25,27 @@ export function verifyMetaWebhookSignature(
   const secret = process.env.META_APP_SECRET
   if (!secret) {
     console.error(
-      '[webhook] META_APP_SECRET is not set — rejecting request. ' +
-        'Configure the env var (Meta → App Settings → Basic → App Secret) ' +
-        'to enable signature verification.',
+      '[webhook] META_APP_SECRET is not set — only accounts with their own ' +
+        'App Secret saved in Settings can be verified. Configure the env var ' +
+        '(Meta → App Settings → Basic → App Secret) for the shared app.',
     )
     return false
   }
 
+  return verifyMetaSignatureWithSecret(rawBody, signatureHeader, secret)
+}
+
+/**
+ * Same check against an explicit secret — used for accounts that bring
+ * their own Meta app and store its App Secret in their channel config
+ * (see src/lib/inbound/meta-account-secrets.ts).
+ */
+export function verifyMetaSignatureWithSecret(
+  rawBody: string,
+  signatureHeader: string | null,
+  secret: string,
+): boolean {
+  if (!secret) return false
   if (!signatureHeader) return false
   if (!signatureHeader.startsWith('sha256=')) return false
 

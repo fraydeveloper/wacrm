@@ -37,6 +37,7 @@ import {
   MEDIA_MAX_BYTES_BY_KIND,
 } from "@/lib/storage/upload-media";
 import { ReplyQuote } from "./reply-quote";
+import type { Channel } from "@/types";
 
 /** Media content types an agent can send from the composer. */
 export type ComposerMediaKind = "image" | "video" | "document" | "audio";
@@ -93,6 +94,8 @@ interface MediaDraft {
 
 interface MessageComposerProps {
   conversationId: string;
+  /** Messenger/Telegram send text only — no attachments or Meta templates. */
+  channel?: Channel;
   sessionExpired: boolean;
   onSend: (text: string, replyToId?: string) => void;
   onSendMedia: (payload: SendMediaPayload) => void;
@@ -114,6 +117,7 @@ const OPUS_ENCODER_PATH = "/opus/encoderWorker.min.js";
 
 export function MessageComposer({
   conversationId,
+  channel = "whatsapp",
   sessionExpired,
   onSend,
   onSendMedia,
@@ -162,6 +166,9 @@ export function MessageComposer({
   const readOnly = !canSend;
   // Media (like free-form text) is only allowed inside the 24h window.
   const inputsDisabled = readOnly || sessionExpired;
+  // Attachments and Meta templates are WhatsApp-only; other channels'
+  // senders handle plain text.
+  const isWhatsApp = channel === "whatsapp";
 
   const clearTimer = useCallback(() => {
     if (timerRef.current !== null) {
@@ -445,8 +452,11 @@ export function MessageComposer({
       {sessionExpired && (
         <div className="mb-2 flex items-center justify-between rounded-lg bg-amber-500/10 px-3 py-2">
           <p className="text-xs text-amber-400">
-            La sesión de 24 horas expiró. Usa una plantilla para reiniciar la conversación.
+            {isWhatsApp
+              ? "La sesión de 24 horas expiró. Usa una plantilla para reiniciar la conversación."
+              : "La ventana de 24 horas expiró. Podrás responder cuando el cliente vuelva a escribir."}
           </p>
+          {isWhatsApp && (
           <Button
             variant="ghost"
             size="sm"
@@ -456,6 +466,7 @@ export function MessageComposer({
             <LayoutTemplate className="mr-1 h-3 w-3" />
             Plantillas
           </Button>
+          )}
         </div>
       )}
 
@@ -527,6 +538,7 @@ export function MessageComposer({
       ) : (
         <div className="flex items-end gap-2">
           {/* Attach menu — photo / video / document / voice. */}
+          {isWhatsApp && (
           <DropdownMenu>
             <DropdownMenuTrigger
               disabled={inputsDisabled || busy}
@@ -564,7 +576,9 @@ export function MessageComposer({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+          )}
 
+          {isWhatsApp && (
           <GatedButton
             variant="ghost"
             size="sm"
@@ -576,6 +590,7 @@ export function MessageComposer({
           >
             <LayoutTemplate className="h-4 w-4" />
           </GatedButton>
+          )}
 
           <GatedButton
             variant="ghost"

@@ -7,16 +7,15 @@
 ## 📑 Tabla de contenidos
 
 1. [Visión general](#1-visión-general)
-2. [Stack tecnológico](#2-stack-tecnológico)
+2. [Stack tecnológico](#2-stack-tecnológico) — detalle en [herramientas-y-arquitectura.md](herramientas-y-arquitectura.md)
 3. [Roles y permisos](#3-roles-y-permisos)
 4. [Módulos del dashboard](#4-módulos-del-dashboard)
 5. [Configuración Settings](#5-configuración-settings)
 6. [Módulo de IA — Detalle completo](#6-módulo-de-ia--detalle-completo)
-7. [API Pública REST v1](#7-api-pública-rest-v1)
-8. [Seguridad](#8-seguridad)
-9. [Despliegue](#9-despliegue) — guía paso a paso en [guia-local-y-produccion.md](guia-local-y-produccion.md)
-10. [Variables de entorno](#10-variables-de-entorno)
-11. [Preguntas frecuentes FAQ](#11-preguntas-frecuentes-faq)
+7. [API Pública REST v1](#7-api-pública-rest-v1) — detalle en [public-api.md](public-api.md)
+8. [Seguridad](#8-seguridad) — detalle en [herramientas-y-arquitectura.md](herramientas-y-arquitectura.md#54-seguridad)
+9. [Despliegue y variables de entorno](#9-despliegue-y-variables-de-entorno) — guía paso a paso en [guia-local-y-produccion.md](guia-local-y-produccion.md)
+10. [Preguntas frecuentes FAQ](#10-preguntas-frecuentes-faq)
 
 ---
 
@@ -28,6 +27,7 @@ wacrm es una plantilla de CRM completa construida sobre la **API oficial de What
 
 | Módulo | Descripción |
 |---|---|
+| Canales | WhatsApp (completo), Messenger y Telegram (solo texto); Instagram aún no |
 | Bandeja de entrada | Múltiples agentes en un solo número, asignación, estados, notas |
 | Contactos | Tags, campos personalizados, importación CSV, deduplicación |
 | Pipelines | Tablero Kanban, negocios vinculados a conversaciones |
@@ -42,15 +42,10 @@ wacrm es una plantilla de CRM completa construida sobre la **API oficial de What
 
 ## 2. Stack tecnológico
 
-| Capa | Tecnología |
-|---|---|
-| **Framework** | Next.js 16 (App Router), React 19, TypeScript |
-| **Estilos** | Tailwind CSS v4 |
-| **Base de datos** | Supabase (PostgreSQL + Auth + Storage + RLS) |
-| **WhatsApp** | Meta Cloud API (API oficial de WhatsApp Business) |
-| **Seguridad de claves** | AES-256-GCM (claves cifradas en reposo) |
-| **Rate limiting** | In-memory sliding window |
-| **PDF parsing** | pdf-parse v2 (ejecución en Node.js serverless) |
+Next.js 16 + React 19 + TypeScript, Tailwind CSS v4 y Supabase (PostgreSQL,
+Auth, Storage, Realtime, RLS, pgvector), con la API oficial de WhatsApp Business
+(Meta Cloud API). Versiones exactas, librerías, arquitectura y tamaño del código:
+[herramientas-y-arquitectura.md](herramientas-y-arquitectura.md).
 
 ---
 
@@ -71,10 +66,12 @@ wacrm usa un sistema de roles basado en 4 niveles. Cada usuario tiene **un rol p
 |---|:---:|:---:|:---:|:---:|
 | Responder mensajes | SI | SI | SI | NO |
 | Gestionar contactos | SI | SI | SI | NO |
-| Crear/editar pipelines | SI | SI | SI | NO |
+| Crear/mover negocios (deals) | SI | SI | SI | NO |
+| Crear/editar embudos y etapas | SI | SI | NO | NO |
+| Crear etiquetas, campos personalizados y plantillas de Meta | SI | SI | NO | NO |
 | Enviar broadcasts | SI | SI | SI | NO |
-| Crear automatizaciones | SI | SI | SI | NO |
-| Cambiar configuración WhatsApp | SI | SI | NO | NO |
+| Crear automatizaciones y flujos | SI | SI | SI | NO |
+| Cambiar configuración WhatsApp, Messenger, Telegram y marca | SI | SI | NO | NO |
 | Configurar IA | SI | SI | NO | NO |
 | Gestionar miembros | SI | SI | NO | NO |
 | Crear llaves API | SI | SI | NO | NO |
@@ -100,14 +97,21 @@ Centro de operaciones para gestionar conversaciones de WhatsApp en equipo.
 
 **Características:**
 - Conversaciones en tiempo real via Supabase Realtime
+- Conversaciones de WhatsApp, Messenger y Telegram con etiqueta de canal (WA / FB / TG)
 - Asignación de conversaciones a agentes del equipo
-- Estados: abierta, resuelta, pendiente
+- Estados: abierta, pendiente, cerrada
 - Notas internas — visibles solo para el equipo
 - Historial completo de mensajes por contacto
 - Envío de medios — imágenes, audio, documentos, videos
 - Plantillas — mensajes aprobados por Meta para iniciar conversaciones
 - Reacciones — emoji reactions a mensajes
 - **Drafts con IA** — botón para redactar respuestas asistidas (requiere IA activa)
+
+> **Por canal:** en WhatsApp se puede enviar texto, adjuntos, notas de voz y
+> plantillas. En **Messenger y Telegram** el agente responde a mano **solo con
+> texto** (los botones de adjuntar y plantillas se ocultan). Messenger respeta
+> la ventana de 24 h de Meta; Telegram no tiene ventana. Las acciones de envío
+> de las automatizaciones siguen siendo solo de WhatsApp.
 
 ### 4.3 Contactos
 
@@ -161,28 +165,33 @@ Motor de automatización sin código basado en reglas.
 
 | Trigger | Descripción |
 |---|---|
-| Mensaje inbound | Se activa cuando llega un mensaje nuevo |
-| Nuevo contacto | Se activa al crear un contacto |
-| Keyword | El mensaje contiene una palabra clave específica |
-| Horario | Se activa en un horario (cron) |
-| Webhook externo | Activado desde sistema externo via HTTP |
+| Mensaje nuevo | Se activa cuando llega un mensaje |
+| Primer mensaje del contacto | Solo en el primer mensaje de un contacto |
+| Coincidencia de palabra clave | El mensaje contiene (o es exactamente) una palabra clave |
+| Contacto nuevo | Se activa al crear un contacto |
+| Conversación asignada | Se activa al asignar una conversación |
+| Etiqueta agregada | Se activa al etiquetar un contacto |
+| Basado en tiempo | Se activa por horario (requiere el cron) |
 
 **Acciones disponibles:**
 
 | Acción | Descripción |
 |---|---|
 | Enviar mensaje | Respuesta automática al contacto |
-| Agregar tag | Etiquetar al contacto automáticamente |
-| Asignar agente | Asignar conversación a un agente |
-| Cambiar estado | Cambiar estado de la conversación |
-| Esperar | Pausar la automatización un tiempo |
+| Enviar plantilla | Envía una plantilla aprobada por Meta |
+| Agregar / quitar etiqueta | Etiquetar al contacto automáticamente |
+| Asignar conversación | Asignar conversación a un agente |
+| Actualizar campo del contacto | Cambia un campo personalizado |
+| Crear negocio | Crea un deal en un embudo y etapa |
+| Esperar | Pausar la automatización un tiempo (requiere el cron) |
 | Condición | Ramificación si/entonces basada en campos |
-| Webhook | Llamar a un endpoint externo |
+| Enviar webhook | Llamar a un endpoint externo |
+| Cerrar conversación | Marca la conversación como cerrada |
 
 **Plantillas de inicio rápido:**
 - Mensaje de bienvenida — saludo automático al primer mensaje
-- Fuera de oficina — respuesta automática en horario no laboral
-- Calificador de leads — preguntas automáticas para calificar
+- Fuera de horario — respuesta automática en horario no laboral
+- Calificador de prospectos — preguntas automáticas para calificar
 - Recordatorio de seguimiento — seguimiento post-venta
 
 **Gestión:**
@@ -223,7 +232,7 @@ Constructor de conversaciones ramificadas con botones interactivos de WhatsApp.
 
 **Plantillas disponibles:**
 - Menú de bienvenida
-- FAQ con botones
+- Bot de preguntas frecuentes
 - Captura de datos de contacto
 
 ### 4.8 Agentes de IA
@@ -241,10 +250,9 @@ Ver **Sección 6** para documentación completa.
 
 ### 4.9 Notificaciones
 
-Centro de notificaciones:
-- Nuevas asignaciones de conversaciones
-- Menciones en notas internas
-- Alertas del sistema
+Centro de notificaciones (tipos definidos en el código):
+- Conversación asignada a ti
+- Derivación de la IA a un humano (llega a todos los admin/owner de la cuenta)
 
 ---
 
@@ -257,13 +265,11 @@ Acceso: **Configuración** en el menú lateral.
 - Nombre y apellido
 - Email para login
 - Avatar / foto de perfil
-- Zona horaria
 
 ### 5.2 Seguridad
 
 - Cambio de contraseña
-- Historial de sesiones activas
-- Cerrar todas las sesiones (global sign-out)
+- Cerrar sesión en todos los dispositivos (global sign-out; no hay listado de sesiones)
 
 ### 5.3 Apariencia
 
@@ -290,6 +296,7 @@ Configuración de la API de WhatsApp Business de Meta.
 | WABA ID | WhatsApp Business Account ID |
 | Access Token | Token de acceso permanente (System User) |
 | Webhook Verify Token | Token para verificar el webhook (lo defines tú) |
+| App Secret de tu propia app de Meta (opcional) | Solo si la empresa usa su propia app de Meta; vacío = app de la plataforma. Ver [configuracion-por-modalidad.md](configuracion-por-modalidad.md) |
 
 **Proceso:**
 1. Crear app en Meta for Developers
@@ -299,7 +306,14 @@ Configuración de la API de WhatsApp Business de Meta.
 
 ### 5.5 Messenger
 
-Configuración para Facebook Messenger (canal adicional).
+Configuración para Facebook Messenger (canal adicional). Igual que en WhatsApp, tiene un campo opcional *App Secret de tu propia app de Meta*. Pasos en
+[omnichannel-messenger.md](omnichannel-messenger.md); si no responde, ver
+[messenger-troubleshooting.md](messenger-troubleshooting.md).
+
+### 5.5.1 Telegram
+
+Conexión con el token de un bot de @BotFather; el webhook se registra solo.
+Pasos en [telegram-setup.md](telegram-setup.md).
 
 ### 5.6 Plantillas de mensajes
 
@@ -315,18 +329,19 @@ Configuración para Facebook Messenger (canal adicional).
 - Usadas para segmentar en broadcasts y automatizaciones
 
 **Campos personalizados:**
-- Tipos: texto, número, fecha, booleano, lista
+- Se crean siempre como campos de texto (la interfaz no ofrece otros tipos)
 - Se añaden al perfil de cada contacto
 
 ### 5.8 Negocios y moneda
 
 - Moneda por defecto para el dashboard y Kanban (incluye **PEN — Sol peruano**)
-- Configuración de etapas del pipeline de ventas
+- Las etapas de cada embudo se configuran desde el propio tablero de Embudos (solo Owner/Admin)
 
 ### 5.9 Miembros del equipo
 
 - Invitar por enlace con rol predefinido
-- Cambiar rol de miembros (Owner/Admin)
+- Cambiar rol de miembros (lo hacen Owner/Admin)
+- Estado de presencia de cada miembro (en línea / ausente / desconectado)
 - Remover miembro — quitar acceso
 - Transferir ownership (solo Owner)
 
@@ -362,9 +377,13 @@ wacrm soporta **5 proveedores** de IA:
 
 ### 6.2 Modelos recomendados
 
-Estos son los modelos **correctos y verificados** por proveedor:
+Estos son los modelos que el formulario **precarga por defecto**
+(`AI_PROVIDER_DEFAULT_MODEL` en `src/lib/ai/defaults.ts`). El campo es texto
+libre: el código no valida el nombre, solo el proveedor lo acepta o lo rechaza.
+Los catálogos de modelos cambian seguido; confirma el nombre vigente en la
+documentación de cada proveedor.
 
-| Proveedor | Modelo recomendado | Descripción |
+| Proveedor | Modelo por defecto | Descripción |
 |---|---|---|
 | **OpenAI** | `gpt-4o-mini` | Rápido, económico, excelente para chat de soporte |
 | **Anthropic** | `claude-haiku-4-5` | Más rápido y económico de Claude |
@@ -372,7 +391,7 @@ Estos son los modelos **correctos y verificados** por proveedor:
 | **Google Gemini** | `gemini-1.5-flash` | Flash = versión rápida y económica |
 | **Z.ai** | `glm-4-flash` | Versión flash del GLM-4 |
 
-**Modelos alternativos:**
+**Modelos alternativos** (referencia, no los define el código):
 
 | Proveedor | Modelo | Características |
 |---|---|---|
@@ -384,7 +403,7 @@ Estos son los modelos **correctos y verificados** por proveedor:
 | Google Gemini | `gemini-2.0-flash` | Último modelo flash |
 | DeepSeek | `deepseek-reasoner` | Con razonamiento en cadena |
 
-> **IMPORTANTE:** Los nombres de modelos deben escribirse EXACTAMENTE como los define el proveedor. Un nombre incorrecto retorna error 404. Por ejemplo: `gpt-5.4-mini` NO existe — el correcto es `gpt-4o-mini`.
+> **IMPORTANTE:** Los nombres de modelos deben escribirse EXACTAMENTE como los define el proveedor. Un nombre que el proveedor no reconoce devuelve error al pulsar "Test key".
 
 ### 6.3 Base de conocimiento
 
@@ -448,8 +467,11 @@ El bot responde mensajes inbound sin intervención humana.
 **Condiciones para que se active:**
 - IA activa (`is_active = true`)
 - Auto-reply habilitado (`auto_reply_enabled = true`)
+- El canal de la conversación está encendido en "Canales con respuesta automática"
 - Ningún flow maneja la conversación
 - Sin agente asignado a la conversación
+- La conversación no fue derivada antes a un humano (`ai_autoreply_disabled`)
+- No se alcanzó el tope de respuestas de esa conversación
 
 **Parámetros configurables:**
 
@@ -459,7 +481,15 @@ El bot responde mensajes inbound sin intervención humana.
 | `auto_reply_max_per_conversation` | Max respuestas bot por hilo | 3 (máx: 20) |
 
 **Handoff automático:**
-El bot emite `[[HANDOFF]]` cuando no puede ayudar con seguridad. El sentinel se filtra antes de enviar — el cliente nunca lo ve. El sistema marca la conversación para revisión humana.
+El bot emite `[[HANDOFF]]` cuando no puede ayudar con seguridad. El sentinel se filtra antes de enviar — el cliente nunca lo ve. Entonces:
+
+1. Se envía al cliente el **mensaje de derivación** (editable en Configuración → IA).
+2. Se apaga la IA en esa conversación (`ai_autoreply_disabled`).
+3. Se crea una notificación para cada Owner/Admin y, si se configuró un **número de aviso**, se le escribe por WhatsApp.
+
+> El mensaje de derivación por defecto (`DEFAULT_HANDOFF_MESSAGE`) menciona a
+> "Max Patricio" y el número +51 989 377 295. Cada empresa debe reemplazarlo por
+> el suyo; si no, sus clientes verán ese contacto.
 
 **Condiciones de handoff:**
 - El cliente pide explícitamente un humano
@@ -488,138 +518,56 @@ La búsqueda semántica requiere una clave de embeddings (puede ser distinta a l
 
 ## 7. API Pública REST v1
 
-Endpoint base: `/api/v1`
+Endpoint base `/api/v1`, autenticación `Authorization: Bearer <api_key>`. Las
+llaves se crean en Configuración → Llaves de API (solo Owner/Admin), con
+permisos por *scope* y revocación inmediata.
 
-Autenticación: `Authorization: Bearer <api_key>`
+| Método y ruta | Uso |
+|---|---|
+| `GET /api/v1/me` | Cuenta y permisos de la llave |
+| `POST /api/v1/messages` | Enviar mensaje (WhatsApp) |
+| `GET`, `POST /api/v1/contacts` · `GET`, `PATCH /api/v1/contacts/{id}` | Contactos (no hay `DELETE`) |
+| `GET /api/v1/conversations` · `GET /api/v1/conversations/{id}` · `GET /api/v1/conversations/{id}/messages` | Conversaciones y su historial |
+| `POST /api/v1/broadcasts` · `GET /api/v1/broadcasts/{id}` | Crear una difusión y consultar su estado (no hay listado) |
+| `GET`, `POST /api/v1/webhooks` · `GET`, `PATCH`, `DELETE /api/v1/webhooks/{id}` | Webhooks salientes firmados |
 
-### Endpoints disponibles
-
-#### Contactos
-```
-GET    /api/v1/contacts           Listar contactos
-POST   /api/v1/contacts           Crear contacto
-GET    /api/v1/contacts/:id       Ver contacto
-PATCH  /api/v1/contacts/:id       Actualizar contacto
-DELETE /api/v1/contacts/:id       Eliminar contacto
-```
-
-#### Conversaciones
-```
-GET    /api/v1/conversations      Listar conversaciones
-GET    /api/v1/conversations/:id  Ver conversación
-```
-
-#### Mensajes
-```
-GET    /api/v1/messages           Listar mensajes de una conversación
-POST   /api/v1/messages           Enviar mensaje
-```
-
-#### Broadcasts
-```
-GET    /api/v1/broadcasts         Listar broadcasts
-POST   /api/v1/broadcasts         Crear y enviar broadcast
-```
-
-#### Webhooks
-```
-GET    /api/v1/webhooks           Listar webhooks registrados
-POST   /api/v1/webhooks           Registrar webhook
-DELETE /api/v1/webhooks/:id       Eliminar webhook
-```
-
-#### Perfil
-```
-GET    /api/v1/me                 Información del usuario autenticado
-```
-
-### Gestión de llaves API
-
-Desde Configuración → Llaves de API:
-- Crear llaves con nombre y permisos
-- Asignar permisos: solo lectura, solo escritura, o ambos
-- Revocar al instante
-
-> Documentación completa: `docs/public-api.md`
+Parámetros, respuestas, paginación, eventos y verificación de firma:
+[public-api.md](public-api.md).
 
 ---
 
 ## 8. Seguridad
 
-| Medida | Implementación |
-|---|---|
-| Cifrado de claves | AES-256-GCM para claves de API (WhatsApp, IA) en BD |
-| RLS | Row Level Security en cada tabla — datos de una cuenta no se filtran a otra |
-| HMAC webhooks | Verificación HMAC-SHA256 en webhooks de Meta |
-| Rate limiting | Ventana deslizante en memoria por usuario/acción |
-| CSP | Content Security Policy en modo Report-Only |
-| HSTS | Strict-Transport-Security con preload |
-| X-Frame-Options | DENY — protección contra clickjacking |
-| RBAC | Control de acceso por roles en cada endpoint |
-| Tokens de invitación | Criptográficos, expiran en uso único |
+Cifrado AES-256-GCM de credenciales, RLS en todas las tablas, firma HMAC de
+webhooks, control de acceso por roles, límite de peticiones en memoria y
+cabeceras de seguridad (la CSP todavía está en modo *Report-Only*). Detalle y
+limitaciones en
+[herramientas-y-arquitectura.md § 5.4](herramientas-y-arquitectura.md#54-seguridad).
 
 ---
 
-## 9. Despliegue
+## 9. Despliegue y variables de entorno
 
-### Opción recomendada: Hostinger
+Producción corre en **Vercel** + **Supabase**; la guía paso a paso (entorno
+local, variables, migraciones, cron y vuelta atrás) está en
+[guia-local-y-produccion.md](guia-local-y-produccion.md). La lista completa de
+variables con su explicación está en `.env.local.example`.
 
-1. Fork del repositorio en GitHub
-2. hPanel → Websites → Create → Node.js
-3. Conectar fork de GitHub
-4. Configurar variables de entorno en hPanel
-5. Push a `main` — Hostinger construye y despliega
-
-### Otras opciones
-
-- **Vercel** — soporte nativo de Next.js
-- **Railway** — deploy desde GitHub
-- **VPS propio** — Node.js + PM2 + nginx
-
-### Pre-requisitos
-
-1. Proyecto Supabase (PostgreSQL + Auth)
-2. Cuenta Meta for Developers (API WhatsApp Business)
-3. HTTPS obligatorio — Meta requiere HTTPS para el webhook
-
----
-
-## 10. Variables de entorno
-
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=https://xxxxxxxx.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
-SUPABASE_SERVICE_ROLE_KEY=eyJ...
-
-# Cifrado AES-256-GCM (generar: openssl rand -hex 32)
-ENCRYPTION_KEY=tu_clave_hex_de_64_caracteres
-
-# WhatsApp
-WHATSAPP_VERIFY_TOKEN=tu_token_personalizado
-
-# IA (opcional - overrides)
-AI_REQUEST_TIMEOUT_MS=30000
-AI_CONTEXT_MESSAGE_LIMIT=20
-
-# App
-NEXT_PUBLIC_APP_URL=https://tudominio.com
-```
+Requisitos: proyecto de Supabase, app de Meta for Developers y HTTPS (Meta y
+Telegram no aceptan webhooks sin HTTPS).
 
 > **NUNCA** compartas `ENCRYPTION_KEY` ni `SUPABASE_SERVICE_ROLE_KEY`.
 
 ---
 
-## 11. Preguntas frecuentes FAQ
+## 10. Preguntas frecuentes FAQ
 
 ### Por qué sale error al hacer "Test key" de la IA?
 
 **Causa más común:** El nombre del modelo es incorrecto.
 
-- INCORRECTO: `gpt-5.4-mini` (no existe)
-- CORRECTO: `gpt-4o-mini`
-
-Consulta la tabla de modelos en la Sección 6.2.
+Comprueba que el nombre coincida exactamente con el que publica el proveedor.
+Los valores por defecto están en la Sección 6.2.
 
 ---
 
@@ -684,5 +632,5 @@ Solo el contenido del mensaje y contexto se envían al proveedor para generar re
 
 ---
 
-*Documentacion generada el 07/07/2026 — wacrm v0.7.0*
+*Documentación generada el 07/07/2026 y revisada contra el código el 09/10/2026 — wacrm v0.7.0*
 

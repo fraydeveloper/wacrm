@@ -11,6 +11,9 @@ export interface SendChannelTextArgs {
   conversationId: string
   contactId: string
   text: string
+  /** Who the stored outbound row is attributed to. Defaults to `bot`
+   *  (AI auto-reply); the inbox composer passes `agent`. */
+  senderType?: 'agent' | 'bot'
 }
 
 /**
@@ -43,6 +46,7 @@ export async function sendChannelText(
         conversationId: args.conversationId,
         contactId: args.contactId,
         text: args.text,
+        senderType: args.senderType,
       })
     case 'telegram':
       return sendTelegramText({
@@ -51,6 +55,7 @@ export async function sendChannelText(
         conversationId: args.conversationId,
         contactId: args.contactId,
         text: args.text,
+        senderType: args.senderType,
       })
     case 'instagram':
       throw new Error(`sendChannelText: channel "${args.channel}" is not implemented yet`)

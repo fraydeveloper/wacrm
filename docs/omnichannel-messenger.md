@@ -1,4 +1,4 @@
-# Omnichannel: Messenger (plus the foundation for Instagram/Telegram)
+# Omnichannel: Messenger, Telegram (and the foundation for Instagram)
 
 wacrm's AI pipeline, knowledge base, and inbox are no longer WhatsApp-only.
 Every conversation and message now carries a `channel` column
@@ -23,14 +23,14 @@ reaching the same RAG/AI reply engine.
   to automations/flows/AI/outbound webhooks. Every channel's webhook
   calls into this instead of re-implementing it.
 - **Outbound routing** (`src/lib/channels/router.ts`) — `sendChannelText()`
-  picks the right sender (WhatsApp vs. Messenger) based on the
+  picks the right sender (WhatsApp, Messenger or Telegram) based on the
   conversation's `channel`. The AI auto-reply bot calls this, not a
   channel-specific function directly.
 
 ## Contact identity
 
 WhatsApp contacts are still identified by phone number
-(`contacts.phone`). Messenger (and future Telegram) contacts have no
+(`contacts.phone`). Messenger and Telegram contacts have no
 phone number — they're identified by their platform ID (a Messenger
 PSID) through the `contact_channel_identities` table
 (`account_id, channel, external_id → contact_id`). `contacts.phone` is
@@ -90,5 +90,12 @@ additive, not a rearchitecture:
 4. A Settings panel to configure it (mirror
    `src/components/settings/messenger-config.tsx`).
 
-Telegram is the simplest candidate next: no Meta App Review, no OAuth —
-just a Bot Token from BotFather and a `setWebhook` call.
+Telegram was added this way (see [telegram-setup.md](./telegram-setup.md)).
+Instagram is the remaining channel: `sendChannelText()` still throws for it.
+
+> **Manual replies:** the inbox composer posts to `/api/whatsapp/send`,
+> which checks the conversation's `channel`: WhatsApp threads use the
+> WhatsApp core; Messenger/Telegram threads go through `sendChannelText()`
+> with `senderType: 'agent'` (text only — the composer hides attachments and
+> templates there). Automation send steps (`src/lib/automations/meta-send.ts`)
+> are still WhatsApp-only.

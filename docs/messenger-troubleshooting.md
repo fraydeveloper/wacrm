@@ -69,8 +69,11 @@ paso 4 lo abre al público.
    los eventos de Messenger se rechazan por firma inválida antes de llegar
    a la IA. En los logs verás:
    `[meta-omni webhook] rejected request with invalid signature`.
-   → Solución: usa una sola app de Meta para ambos productos, o pon en
-   `META_APP_SECRET` el App Secret de la app que tiene la Página.
+   → Solución: usa una sola app de Meta para ambos productos, pon en
+   `META_APP_SECRET` el App Secret de la app que tiene la Página, o pega
+   ese App Secret en Configuración → Messenger → *App Secret de tu propia
+   app de Meta* (requiere la migración `038`; ver
+   [configuracion-por-modalidad.md](configuracion-por-modalidad.md)).
 
 2. **¿La Página está suscrita al campo `messages`?**
    Meta App → Messenger → Settings → Webhooks: la Callback URL debe ser

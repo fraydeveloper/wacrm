@@ -1,12 +1,6 @@
 import { cn } from "@/lib/utils";
 import type { Channel } from "@/types";
 
-/**
- * Shared channel → (label, color) mapping. Text pills rather than
- * brand icons — avoids depending on lucide-react shipping WhatsApp/
- * Messenger/Telegram brand glyphs, which isn't guaranteed across
- * versions.
- */
 export const CHANNEL_META: Record<Channel, { label: string; short: string; className: string }> = {
   whatsapp: { label: "WhatsApp", short: "WA", className: "bg-emerald-500/15 text-emerald-500" },
   messenger: { label: "Messenger", short: "FB", className: "bg-blue-500/15 text-blue-500" },

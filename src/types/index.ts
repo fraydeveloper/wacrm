@@ -244,6 +244,8 @@ export interface WhatsAppConfig {
   waba_id?: string;
   access_token: string;
   verify_token?: string;
+  /** Encrypted own-Meta-app secret (migration 038); null → META_APP_SECRET. */
+  app_secret?: string | null;
   status: 'connected' | 'disconnected';
   connected_at?: string;
   /**
@@ -264,6 +266,8 @@ export interface MessengerConfig {
   page_id: string;
   page_access_token: string;
   verify_token?: string;
+  /** Encrypted own-Meta-app secret (migration 038); null → META_APP_SECRET. */
+  app_secret?: string | null;
   status: 'connected' | 'disconnected';
   connected_at?: string;
 }

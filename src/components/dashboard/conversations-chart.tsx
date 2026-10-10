@@ -17,12 +17,6 @@ interface ConversationsChartProps {
   onRangeChange: (r: RangeDays) => void
 }
 
-// ------------------------------------------------------------
-// Layout constants. The SVG renders into a fixed viewBox and scales
-// via CSS (preserveAspectRatio default). Everything inside uses
-// viewBox coordinates so the drawing math stays simple even as the
-// container resizes.
-// ------------------------------------------------------------
 const VB_W = 760
 const VB_H = 240
 const PADDING = { top: 16, right: 16, bottom: 28, left: 40 }

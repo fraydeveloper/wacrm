@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { decrypt } from '@/lib/whatsapp/encryption'
 import { verifyMetaWebhookSignature } from '@/lib/whatsapp/webhook-signature'
 import { ingestInboundMessage } from '@/lib/inbound/ingest-core'
+import { trustedMessengerEntries } from '@/lib/inbound/meta-account-secrets'
 
 // Currently handles Messenger only (object === 'page'). Instagram Direct
 // shares this same Graph API webhook shape (object === 'instagram') and
@@ -99,27 +100,40 @@ export async function POST(request: Request) {
   const rawBody = await request.text()
   const signature = request.headers.get('x-hub-signature-256')
 
-  if (!verifyMetaWebhookSignature(rawBody, signature)) {
+  const signedByOperatorApp = verifyMetaWebhookSignature(rawBody, signature)
+
+  let body: MessengerWebhookBody
+  try {
+    body = JSON.parse(rawBody)
+  } catch {
+    return NextResponse.json(
+      { error: signedByOperatorApp ? 'Invalid JSON' : 'Invalid signature' },
+      { status: signedByOperatorApp ? 400 : 401 },
+    )
+  }
+
+  // Not the shared app — maybe a Page connected through the account's own
+  // Meta app (App Secret saved in Settings → Messenger).
+  const ownAppBody = signedByOperatorApp
+    ? null
+    : await trustedMessengerEntries(body, rawBody, signature)
+  if (ownAppBody) body = ownAppBody
+
+  if (!signedByOperatorApp && !ownAppBody) {
     // The single most common reason Messenger "doesn't respond" while
     // WhatsApp works: the Facebook Page and the WhatsApp number live in
     // DIFFERENT Meta apps, so this POST is signed with a different App
     // Secret than the one in META_APP_SECRET — every Messenger event is
     // dropped here before it ever reaches the AI. Put both products under
     // the same Meta app (or point META_APP_SECRET at the app that owns
-    // the Page). See docs/messenger-troubleshooting.md.
+    // the Page), or save that app's secret in Settings → Messenger.
+    // See docs/messenger-troubleshooting.md.
     console.warn(
       '[meta-omni webhook] rejected request with invalid signature — ' +
-        'the signing App Secret does not match META_APP_SECRET. Confirm the ' +
-        'Facebook Page and WhatsApp number are in the SAME Meta app.',
+        'the signing App Secret matches neither META_APP_SECRET nor the ' +
+        'App Secret saved for this Page in Settings → Messenger.',
     )
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
-  }
-
-  let body: MessengerWebhookBody
-  try {
-    body = JSON.parse(rawBody)
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
   // Same after()-based deferred processing as the WhatsApp webhook, and

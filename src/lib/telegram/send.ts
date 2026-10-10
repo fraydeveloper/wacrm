@@ -15,6 +15,8 @@ export interface SendTelegramTextArgs {
   conversationId: string
   contactId: string
   text: string
+  /** Defaults to `bot` (AI auto-reply); the inbox composer passes `agent`. */
+  senderType?: 'agent' | 'bot'
 }
 
 /**
@@ -58,7 +60,7 @@ export async function sendTelegramText(
   const { error: msgErr } = await db.from('messages').insert({
     conversation_id: args.conversationId,
     channel: 'telegram',
-    sender_type: 'bot',
+    sender_type: args.senderType ?? 'bot',
     content_type: 'text',
     content_text: args.text,
     message_id: messageId,
